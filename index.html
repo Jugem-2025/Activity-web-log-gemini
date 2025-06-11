@@ -11,6 +11,7 @@
       margin: auto;
       background: #f5f6fa;
       color: #333;
+      padding: 16px;
     }
     header {
       display: flex;
@@ -74,18 +75,26 @@
       gap: 8px;
       margin-bottom: 8px;
     }
-    .checkbox-grid label {
+    .checkbox-grid .tag-item {
+      display: flex;
+      align-items: center;
       background: #e8f0fe;
       padding: 4px 8px;
       border-radius: 4px;
-      cursor: pointer;
       font-size: 0.95em;
-      display: flex;
-      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
     }
     .checkbox-grid input[type="checkbox"] {
       margin-right: 4px;
     }
+    /* ▼▽▼▽▼【追加】チェックされた項目のスタイル ▼▽▼▽▼ */
+    .checkbox-grid .tag-item.active {
+      background: #4a90e2;
+      color: white;
+      font-weight: bold;
+    }
+    /* ▲△▲△▲【追加】ここまで ▲△▲△▲ */
     .flex-row {
       display: flex;
       gap: 8px;
@@ -136,217 +145,103 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       resize: vertical;
+      box-sizing: border-box; /* 追加 */
     }
   </style>
 </head>
 <body>
+
   <header>
     <h1>活動記録</h1>
     <div class="top-icons">
-      <a href="weekly.html" title="週間表示">📅</a>
-      <a href="tags.html" title="タグ編集">⚙️</a>
+      <a href="#">⚙️</a>
+      <a href="#">📊</a>
     </div>
   </header>
 
-  <input type="date" id="recordDate" class="date-picker">
-  <div id="recordArea"></div>
+  <input type="date" class="date-picker" value="2025-06-12">
 
-  <div class="daily-note">
-    <label><input type="checkbox" id="alcohol"> アルコール</label>
-    <label><input type="checkbox" id="caffeine"> カフェイン</label>
-    <label>メモ・備考：</label>
-    <textarea id="dailyMemo" rows="3" placeholder="自由記入"></textarea>
+  <div class="hour-block">
+    <div class="hour-header">
+      <span>09:00 - 10:00</span>
+      <span class="compact"></span>
+    </div>
+    <div class="hour-content">
+      <p>やったこと</p>
+      <div class="checkbox-grid">
+        <div class="tag-item">
+          <input type="checkbox" id="task1">
+          <span>メール返信</span>
+        </div>
+        <div class="tag-item">
+          <input type="checkbox" id="task2">
+          <span>資料作成</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const defaultTags = ["起床","シャワー・風呂","朝食","昼食","夕食","外出","移動","個人課題","講義","帰宅","家事","休憩","就寝","薬","睡眠"];
-    const tags = JSON.parse(localStorage.getItem("tags")) || defaultTags;
-    const moods = Array.from({ length: 21 }, (_, i) => i * 5);
-    const recordArea = document.getElementById('recordArea');
-    const alcoholChk = document.getElementById('alcohol');
-    const caffeineChk = document.getElementById('caffeine');
-    const dailyMemo = document.getElementById('dailyMemo');
+  <div class="hour-block">
+    <div class="hour-header">
+      <span>10:00 - 11:00</span>
+      <span class="compact"></span>
+    </div>
+    <div class="hour-content">
+      <p>やったこと</p>
+      <div class="checkbox-grid">
+        <div class="tag-item">
+          <input type="checkbox" id="task3">
+          <span>定例会議</span>
+        </div>
+        <div class="tag-item">
+          <input type="checkbox" id="task4">
+          <span>ブレインストーミング</span>
+        </div>
+        <div class="tag-item">
+          <input type="checkbox" id="task5">
+          <span>議事録作成</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="daily-note">
+    <label for="daily-summary">今日のまとめ</label>
+    <textarea id="daily-summary" rows="4"></textarea>
+  </div>
 
-    function render() {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      recordArea.innerHTML = '';
 
-      if (data.dailyNote) {
-        alcoholChk.checked = data.dailyNote.alcohol;
-        caffeineChk.checked = data.dailyNote.caffeine;
-        dailyMemo.value = data.dailyNote.memo;
-      } else {
-        // dailyNoteがない場合は初期状態にリセット
-        alcoholChk.checked = false;
-        caffeineChk.checked = false;
-        dailyMemo.value = '';
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // 各時間ブロックのアコーディオン機能
+  const headers = document.querySelectorAll('.hour-header');
+  headers.forEach(header => {
+    header.addEventListener('click', () => {
+      // nextElementSiblingは、headerのすぐ次の要素（.hour-content）を指す
+      const content = header.nextElementSibling;
+      if (content) {
+        content.classList.toggle('hidden');
       }
+    });
+  });
 
-      for (let i = 0; i < 24; i++) {
-        const hour = (i + 4) % 24;
-        const key = hour.toString().padStart(2,'0');
-        const entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
-
-        const block = document.createElement('div');
-        block.className = 'hour-block';
-        const header = document.createElement('div');
-        header.className = 'hour-header';
-        const label = document.createElement('div');
-        label.textContent = `${key}:00`;
-        const btn = document.createElement('button');
-        btn.className = 'save-btn';
-        btn.textContent = '保存する';
-
-        const compact = document.createElement('div');
-        compact.className = 'compact';
-        compact.innerHTML = `
-          <strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}<br>
-          <strong>気分:</strong> ${entry.mood}　<strong>疲労:</strong> ${entry.fatigue}<br>
-          <strong>メモ:</strong> ${entry.free || '―'}
-        `;
-
-        const content = document.createElement('div');
-        content.className = entry.folded ? 'hour-content hidden' : 'hour-content';
-
-        const ckGrid = document.createElement('div');
-        ckGrid.className = 'checkbox-grid';
-        tags.forEach(tag => {
-          const lbl = document.createElement('label');
-          const chk = document.createElement('input');
-          chk.type = 'checkbox';
-          chk.value = tag;
-          chk.checked = entry.activity.includes(tag);
-          chk.addEventListener('click', e => e.stopPropagation()); // イベント伝播を停止
-          chk.addEventListener('change', () => {
-            if (chk.checked) {
-              if (tag === "睡眠") {
-                // "睡眠"が選択されたら他の活動を解除し、気分・疲労度をクリア
-                entry.activity = ["睡眠"];
-                selMood.value = ''; // 選択を解除
-                selFat.value = '';   // 選択を解除
-                // 他のチェックボックスの状態を更新（UIに即座に反映）
-                ckGrid.querySelectorAll('input[type="checkbox"]').forEach(otherChk => {
-                  if (otherChk !== chk) {
-                    otherChk.checked = false;
-                  }
-                });
-              } else {
-                // "睡眠"が選択されていなければ、"睡眠"を解除して現在のタグを追加
-                entry.activity = entry.activity.filter(t => t !== "睡眠");
-                if (!entry.activity.includes(tag)) {
-                  entry.activity.push(tag);
-                }
-              }
-            } else {
-              // チェックが外されたらそのタグを削除
-              entry.activity = entry.activity.filter(t => t !== tag);
-            }
-            // ここではrender()を呼び出さず、UIの状態は保存ボタンで確定する
-            // もしチェックボックスの変更が即座にUIに反映されないとユーザーが混乱する場合は、
-            // 各チェックボックスのchangeイベントで該当する要素のみ更新するロジックを追加検討
-            // または、この段階でdataオブジェクトを更新し、保存時にまとめて保存する
-          });
-          lbl.appendChild(chk);
-          lbl.appendChild(document.createTextNode(tag));
-          ckGrid.appendChild(lbl);
-        });
-
-        const freeTxt = document.createElement('input');
-        freeTxt.type = 'text';
-        freeTxt.placeholder = '自由記入';
-        freeTxt.value = entry.free;
-
-        const row = document.createElement('div');
-        row.className = 'flex-row';
-        const moodLabel = document.createElement('label');
-        moodLabel.textContent = "気分:";
-        const selMood = document.createElement('select');
-        moods.forEach(m => {
-          const o = document.createElement('option');
-          o.value = o.textContent = m;
-          if (m === entry.mood) o.selected = true;
-          selMood.appendChild(o);
-        });
-        // 睡眠が選択されている場合は気分を無効化
-        if (entry.activity.includes("睡眠")) selMood.value = '';
-
-        const fatigueLabel = document.createElement('label');
-        fatigueLabel.textContent = "疲労度:";
-        const selFat = document.createElement('select');
-        moods.forEach(f => {
-          const o = document.createElement('option');
-          o.value = o.textContent = f;
-          if (f === entry.fatigue) o.selected = true;
-          selFat.appendChild(o);
-        });
-        // 睡眠が選択されている場合は疲労度を無効化
-        if (entry.activity.includes("睡眠")) selFat.value = '';
-
-        row.append(moodLabel, selMood, fatigueLabel, selFat);
-        content.append(ckGrid, freeTxt, row, btn);
-        header.append(label, btn);
-        block.append(header, compact, content);
-        recordArea.append(block);
-
-        header.onclick = () => {
-          entry.folded = !entry.folded;
-          data[key] = entry; // データを更新
-          localStorage.setItem(dateStr, JSON.stringify(data)); // 保存
-          render(); // UIを再描画
-        };
-        
-        btn.onclick = () => {
-          entry.mood = entry.activity.includes("睡眠") ? '' : parseInt(selMood.value);
-          entry.fatigue = entry.activity.includes("睡眠") ? '' : parseInt(selFat.value);
-          entry.free = freeTxt.value;
-          entry.folded = true;
-          data[key] = entry;
-          data.dailyNote = {
-            alcohol: alcoholChk.checked,
-            caffeine: caffeineChk.checked,
-            memo: dailyMemo.value
-          };
-          localStorage.setItem(dateStr, JSON.stringify(data));
-          render();
-        };
-
-        compact.style.display = entry.folded ? 'block' : 'none';
+  // 「やったこと」のチェックボックス機能
+  const tagItems = document.querySelectorAll('.tag-item');
+  tagItems.forEach(item => {
+    item.addEventListener('click', (event) => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        // チェックボックス自体をクリックした場合、イベントが二重に発火するのを防ぐ
+        if (event.target.tagName !== 'INPUT') {
+          checkbox.checked = !checkbox.checked;
+        }
+        // checkbox.checkedの状態に応じてactiveクラスを付け外しする
+        item.classList.toggle('active', checkbox.checked);
       }
-    }
-
-    // 日付選択のイベントリスナー
-    const dp = document.getElementById('recordDate');
-    dp.value = new Date().toISOString().split('T')[0];
-    dp.onchange = render;
-
-    // dailyNoteのチェックボックスとテキストエリアの変更イベントリスナー
-    alcoholChk.addEventListener('change', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.alcohol = alcoholChk.checked;
-      localStorage.setItem(dateStr, JSON.stringify(data));
     });
+  });
 
-    caffeineChk.addEventListener('change', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.caffeine = caffeineChk.checked;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
-
-    dailyMemo.addEventListener('input', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.memo = dailyMemo.value;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
-
-
-    render(); // 初期表示
-  </script>
+});
+</script>
 </body>
 </html>
