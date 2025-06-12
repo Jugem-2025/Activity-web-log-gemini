@@ -57,12 +57,6 @@
       border-bottom: 1px solid #ddd;
       cursor: pointer;
     }
-    .compact {
-      display: none;
-      padding: 10px 12px;
-      font-size: 0.95em;
-      color: #555;
-    }
     .hour-content {
       padding: 10px 12px;
     }
@@ -88,64 +82,24 @@
     .checkbox-grid input[type="checkbox"] {
       margin-right: 4px;
     }
-    /* ▼▽▼▽▼【追加】チェックされた項目のスタイル ▼▽▼▽▼ */
     .checkbox-grid .tag-item.active {
       background: #4a90e2;
       color: white;
       font-weight: bold;
     }
-    /* ▲△▲△▲【追加】ここまで ▲△▲△▲ */
-    .flex-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .flex-row label {
-      font-weight: bold;
-      white-space: nowrap;
-    }
-    .flex-row select,
-    .flex-row input[type="text"] {
-      padding: 6px;
-      font-size: 0.95em;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
     .save-btn {
-      background: #4a90e2;
+      background: #28a745;
       color: white;
       border: none;
       padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
+      display: block;
+      margin-top: 10px;
+      margin-left: auto;
     }
     .save-btn:hover {
-      background: #3b78c5;
-    }
-    .daily-note {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .daily-note label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: bold;
-    }
-    .daily-note input[type="checkbox"] {
-      margin-right: 6px;
-    }
-    .daily-note textarea {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
-      box-sizing: border-box; /* 追加 */
+      background: #218838;
     }
   </style>
 </head>
@@ -155,93 +109,135 @@
     <h1>活動記録</h1>
     <div class="top-icons">
       <a href="#">⚙️</a>
-      <a href="#">📊</a>
+      <a href="./weekly.html">📊</a>
     </div>
   </header>
 
-  <input type="date" class="date-picker" value="2025-06-12">
+  <input type="date" class="date-picker" id="datePicker">
 
-  <div class="hour-block">
-    <div class="hour-header">
-      <span>09:00 - 10:00</span>
-      <span class="compact"></span>
-    </div>
-    <div class="hour-content">
-      <p>やったこと</p>
-      <div class="checkbox-grid">
-        <div class="tag-item">
-          <input type="checkbox" id="task1">
-          <span>メール返信</span>
-        </div>
-        <div class="tag-item">
-          <input type="checkbox" id="task2">
-          <span>資料作成</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="hour-block">
-    <div class="hour-header">
-      <span>10:00 - 11:00</span>
-      <span class="compact"></span>
-    </div>
-    <div class="hour-content">
-      <p>やったこと</p>
-      <div class="checkbox-grid">
-        <div class="tag-item">
-          <input type="checkbox" id="task3">
-          <span>定例会議</span>
-        </div>
-        <div class="tag-item">
-          <input type="checkbox" id="task4">
-          <span>ブレインストーミング</span>
-        </div>
-        <div class="tag-item">
-          <input type="checkbox" id="task5">
-          <span>議事録作成</span>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="daily-note">
-    <label for="daily-summary">今日のまとめ</label>
-    <textarea id="daily-summary" rows="4"></textarea>
-  </div>
-
-
-<script>
+  <div id="activity-container"></div>
+  <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-  // 各時間ブロックのアコーディオン機能
-  const headers = document.querySelectorAll('.hour-header');
-  headers.forEach(header => {
+  // ============== 1. 設定と動的生成 ==============
+
+  // ご指定の共通タスク項目リスト
+  const commonTasks = [
+    "起床","シャワー・風呂","朝食","昼食","夕食","外出","移動","個人課題",
+    "講義","帰宅","家事","休憩","就寝","薬","睡眠"
+  ];
+  
+  const activityContainer = document.getElementById('activity-container');
+
+  // 0時から23時までの時間ブロックを自動生成
+  for (let i = 0; i < 24; i++) {
+    const hour = String(i).padStart(2, '0');
+    const nextHour = String(i + 1).padStart(2, '0'); // 24時まで表示するため
+    const nextHourLabel = (i + 1) % 24; // 23時の次は00時
+    const nextHourText = String(nextHourLabel).padStart(2, '0');
+
+    // チェックボックスのHTMLを生成
+    const checkboxesHTML = commonTasks.map((task, index) => `
+      <div class="tag-item">
+        <input type="checkbox" id="task_${hour}_${index}">
+        <label for="task_${hour}_${index}">${task}</label>
+      </div>
+    `).join('');
+
+    // 時間ブロック全体のHTMLを組み立て
+    const hourBlockHTML = `
+      <div class="hour-block">
+        <div class="hour-header">
+          <span>${hour}:00 - ${nextHourText}:00</span>
+        </div>
+        <div class="hour-content hidden">
+          <p>やったこと</p>
+          <div class="checkbox-grid">
+            ${checkboxesHTML}
+          </div>
+          <button class="save-btn">保存</button>
+        </div>
+      </div>
+    `;
+    // コンテナに挿入
+    activityContainer.insertAdjacentHTML('beforeend', hourBlockHTML);
+  }
+
+  // ============== 2. イベントリスナーの設定 ==============
+  
+  // 今日の日付をデフォルトで設定
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('datePicker').value = `${yyyy}-${mm}-${dd}`;
+
+  // アコーディオン機能
+  document.querySelectorAll('.hour-header').forEach(header => {
     header.addEventListener('click', () => {
-      // nextElementSiblingは、headerのすぐ次の要素（.hour-content）を指す
-      const content = header.nextElementSibling;
-      if (content) {
-        content.classList.toggle('hidden');
-      }
+      header.nextElementSibling.classList.toggle('hidden');
     });
   });
 
-  // 「やったこと」のチェックボックス機能
-  const tagItems = document.querySelectorAll('.tag-item');
-  tagItems.forEach(item => {
-    item.addEventListener('click', (event) => {
-      const checkbox = item.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        // チェックボックス自体をクリックした場合、イベントが二重に発火するのを防ぐ
-        if (event.target.tagName !== 'INPUT') {
-          checkbox.checked = !checkbox.checked;
-        }
-        // checkbox.checkedの状態に応じてactiveクラスを付け外しする
+  // チェックボックス機能
+  document.querySelectorAll('.tag-item').forEach(item => {
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+      checkbox.addEventListener('change', () => {
         item.classList.toggle('active', checkbox.checked);
-      }
-    });
+      });
+    }
   });
 
+  // 保存ボタンの機能
+  document.querySelectorAll('.save-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const dateStr = document.getElementById('datePicker').value;
+      if (!dateStr) {
+        alert('日付を選択してください。');
+        return;
+      }
+      
+      const hourBlock = button.closest('.hour-block');
+      const hourHeader = hourBlock.querySelector('.hour-header span:first-child');
+      const hour = hourHeader.textContent.split(':')[0].trim();
+
+      const checkedTasks = [];
+      hourBlock.querySelectorAll('input[type="checkbox"]:checked').forEach(checkedBox => {
+        const label = checkedBox.parentElement.querySelector('label');
+        if (label) {
+           checkedTasks.push(label.textContent);
+        }
+      });
+
+      let dailyData = {};
+      try {
+        const rawData = localStorage.getItem(dateStr);
+        if (rawData) {
+          dailyData = JSON.parse(rawData);
+        }
+      } catch (e) {
+        console.error('LocalStorageからのデータ読み込みに失敗しました:', e);
+        dailyData = {};
+      }
+      
+      if (checkedTasks.length > 0) {
+         if (!dailyData[hour]) {
+            dailyData[hour] = {};
+         }
+         dailyData[hour].activity = checkedTasks;
+      } else {
+        if (dailyData[hour]) {
+            delete dailyData[hour];
+        }
+      }
+      
+      localStorage.setItem(dateStr, JSON.stringify(dailyData));
+      alert(`${dateStr} の ${hour}:00の活動を保存しました。`);
+    });
+  });
 });
 </script>
+
 </body>
 </html>
