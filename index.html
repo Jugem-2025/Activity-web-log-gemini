@@ -167,8 +167,13 @@
     const caffeineChk = document.getElementById('caffeine');
     const dailyMemo = document.getElementById('dailyMemo');
 
+    // 気分と疲労度の自動入力のために直前の値を保持する変数
+    let lastMood = 50;
+    let lastFatigue = 50;
+
     function render() {
       const dateStr = document.getElementById('recordDate').value;
+      // レンダリング開始時に現在の日のデータを全て読み込む
       const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
       recordArea.innerHTML = ''; // 一度DOMをクリア
 
@@ -183,11 +188,34 @@
         dailyMemo.value = '';
       }
 
+      // レンダリング前に、直前の時間帯の気分・疲労度をリセット
+      lastMood = 50;
+      lastFatigue = 50;
+
       for (let i = 0; i < 24; i++) {
         const hour = (i + 4) % 24;
         const key = hour.toString().padStart(2,'0');
-        // entryを毎回再生成
-        const entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+        // entryを毎回再生成ではなく、dataから取得するか、デフォルト値で初期化
+        let entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+
+        // ★気分と疲労度の自動入力ロジック
+        // entry.moodまたはentry.fatigueが初期値(50)の場合のみ、直前の値を引き継ぐ
+        // ただし、最初の時間帯（i=0）は自動入力しないか、特定の初期値にする
+        if (i > 0) { // 2番目の時間帯以降で適用
+            if (entry.mood === 50 && !entry.activity.includes("睡眠")) { // 睡眠時は自動入力しない
+                entry.mood = lastMood;
+            }
+            if (entry.fatigue === 50 && !entry.activity.includes("睡眠")) { // 睡眠時は自動入力しない
+                entry.fatigue = lastFatigue;
+            }
+        }
+        // 現在の時間帯の気分と疲労度を次の時間帯のために保持
+        if (entry.mood !== '') { // 睡眠などでmoodが''の場合は更新しない
+            lastMood = entry.mood;
+        }
+        if (entry.fatigue !== '') { // 睡眠などでfatigueが''の場合は更新しない
+            lastFatigue = entry.fatigue;
+        }
 
         const block = document.createElement('div');
         block.className = 'hour-block';
@@ -244,8 +272,6 @@
             } else {
               entry.activity = entry.activity.filter(t => t !== tag);
             }
-            // ここではrender()を呼び出さない。UIの見た目はチェックボックス自身の状態と、
-            // 必要に応じて睡眠時の挙動で自動的に更新される。
             // データの永続化は保存ボタンで行う。
           });
           lbl.appendChild(chk);
@@ -275,10 +301,17 @@
           selMood.appendChild(o);
         });
         // 睡眠が選択されている場合は気分を無効化（UI上の表示）
-        if (entry.activity.includes("睡眠")) selMood.value = '';
+        if (entry.activity.includes("睡眠")) {
+            selMood.value = '';
+            selMood.disabled = true; // 無効化
+        } else {
+            selMood.disabled = false; // 有効化
+        }
         // 気分の変更イベントリスナー
         selMood.addEventListener('change', () => {
             entry.mood = parseInt(selMood.value);
+            // ユーザーが手動で変更したら、その値をlastMoodに設定し、自動入力の基準とする
+            lastMood = entry.mood;
         });
 
 
@@ -293,15 +326,21 @@
           selFat.appendChild(o);
         });
         // 睡眠が選択されている場合は疲労度を無効化（UI上の表示）
-        if (entry.activity.includes("睡眠")) selFat.value = '';
+        if (entry.activity.includes("睡眠")) {
+            selFat.value = '';
+            selFat.disabled = true; // 無効化
+        } else {
+            selFat.disabled = false; // 有効化
+        }
         // 疲労度の変更イベントリスナー
         selFat.addEventListener('change', () => {
             entry.fatigue = parseInt(selFat.value);
+            // ユーザーが手動で変更したら、その値をlastFatigueに設定し、自動入力の基準とする
+            lastFatigue = entry.fatigue;
         });
 
         row.append(moodLabel, selMood, fatigueLabel, selFat);
         
-        // ★ここを修正しました！ freeTxtとrowをcontentに追加します。
         content.append(ckGrid, freeTxt, row, btn); 
         
         header.append(label, btn);
@@ -317,18 +356,22 @@
         
         btn.onclick = () => {
           // 保存ボタンが押されたときに、現在のUI上の値をデータに反映
-          entry.mood = entry.activity.includes("睡眠") ? '' : parseInt(selMood.value);
-          entry.fatigue = entry.activity.includes("睡眠") ? '' : parseInt(selFat.value);
+          entry.mood = entry.activity.includes("睡眠") ? '' : (selMood.value === '' ? '' : parseInt(selMood.value));
+          entry.fatigue = entry.activity.includes("睡眠") ? '' : (selFat.value === '' ? '' : parseInt(selFat.value));
           entry.free = freeTxt.value;
           entry.folded = true; // 保存時に折りたたむ
-          data[key] = entry; // 現在のentryオブジェクトをdataに格納
+          
+          // ★ここで重要な修正:
+          // dataオブジェクト全体をlocalStorageから読み込み、現在の時間帯のentryを更新してから保存
+          const currentData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+          currentData[key] = entry; // 現在のentryオブジェクトをcurrentDataに格納
 
-          data.dailyNote = {
+          currentData.dailyNote = {
             alcohol: alcoholChk.checked,
             caffeine: caffeineChk.checked,
             memo: dailyMemo.value
           };
-          localStorage.setItem(dateStr, JSON.stringify(data));
+          localStorage.setItem(dateStr, JSON.stringify(currentData)); // currentDataを保存
           render(); // 保存後にUIを再描画して最新の状態にする
         };
 
@@ -366,7 +409,6 @@
       data.dailyNote.memo = dailyMemo.value;
       localStorage.setItem(dateStr, JSON.stringify(data));
     });
-
 
     render(); // 初期表示
   </script>
