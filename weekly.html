@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>週間表示</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 1000px; /* 週間表示なので少し広めに */
+      margin: auto;
+      background: #f5f6fa;
+      color: #333;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #4a90e2;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: 1.4em;
+      margin: 0;
+    }
+    .top-icons a {
+      margin-left: 10px;
+      color: white;
+      font-size: 1.4em;
+      text-decoration: none;
+      padding: 5px;
+    }
+    .week-navigation {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .week-navigation button {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background 0.2s;
+    }
+    .week-navigation button:hover {
+      background: #5a6268;
+    }
+    #weekDisplay {
+      font-weight: bold;
+    }
+
+    /* ★週表示テーブルのスタイル */
+    #weeklyTableContainer {
+      overflow-x: auto; /* 横スクロールを可能にする */
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 10px; /* テーブル内外に余白 */
+    }
+    #weeklyTable {
+      width: 100%; /* コンテナいっぱいに広がる */
+      border-collapse: collapse; /* セルの境界線を結合 */
+      min-width: 700px; /* スマホで横スクロールさせるための最小幅 */
+    }
+    #weeklyTable th, #weeklyTable td {
+      border: 1px solid #eee; /* セルの境界線 */
+      padding: 8px;
+      text-align: left;
+      vertical-align: top; /* 上揃え */
+      font-size: 0.85em; /* 文字を小さめに */
+    }
+    #weeklyTable th {
+      background: #f8f9fa;
+      font-weight: bold;
+      white-space: nowrap; /* 日付が改行されないように */
+    }
+    #weeklyTable td {
+      background: white;
+      line-height: 1.4; /* 行間を調整 */
+    }
+    #weeklyTable tr:nth-child(even) td {
+      background: #fdfdfe; /* 偶数行の背景色 */
+    }
+    .daily-summary {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px dashed #eee;
+    }
+    .daily-summary p {
+        margin: 0;
+    }
+
+    /* 印刷用スタイル (A4サイズ調整) */
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+        max-width: none;
+        width: 210mm; /* A4幅 */
+        height: 297mm; /* A4高さ */
+        overflow: hidden; /* 余分なスクロールバー非表示 */
+      }
+      header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
+        display: none;
+      }
+      #weeklyTableContainer {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        display: block; /* table-containerをブロック要素に */
+        overflow: visible; /* 印刷時はスクロール不要 */
+      }
+      #weeklyTable {
+        width: 100%;
+        height: 100%;
+        font-size: 0.7em; /* 印刷時にフォントサイズをさらに小さく */
+      }
+      #weeklyTable th, #weeklyTable td {
+        padding: 4px; /* 印刷時のパディングを調整 */
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>週間表示</h1>
+    <div class="top-icons">
+      <a href="index.html" title="活動記録">✏️</a>
+      <a href="#" id="saveImageBtn" title="画像を保存">📷</a>
+    </div>
+  </header>
+
+  <div class="week-navigation">
+    <button id="prevWeekBtn">← 前の週</button>
+    <span id="weekDisplay"></span>
+    <button id="nextWeekBtn">次の週 →</button>
+  </div>
+
+  <div id="weeklyTableContainer">
+    <table id="weeklyTable">
+      <thead>
+        <tr id="dateRow">
+          <th>時間</th>
+        </tr>
+      </thead>
+      <tbody id="weeklyTableBody">
+        </tbody>
+    </table>
+  </div>
+
+  <script>
+    const daysOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+    const weeklyTableBody = document.getElementById('weeklyTableBody');
+    const dateRow = document.getElementById('dateRow');
+    const weekDisplay = document.getElementById('weekDisplay');
+    const prevWeekBtn = document.getElementById('prevWeekBtn');
+    const nextWeekBtn = document.getElementById('nextWeekBtn');
+    const saveImageBtn = document.getElementById('saveImageBtn');
+
+    let currentMonday = getMonday(new Date()); // 現在表示している週の月曜日
+
+    // 指定された日付の週の月曜日を取得する関数
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay(); // 0 = 日曜, 1 = 月曜, ...
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 月曜日に調整 (日曜日の場合は前の月曜へ)
+      d.setDate(diff);
+      d.setHours(0, 0, 0, 0); // 時間をリセット
+      return d;
+    }
+
+    // 日付を "MM/DD(曜日)" 形式でフォーマット
+    function formatDate(date) {
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const dayOfWeek = daysOfWeek[date.getDay()];
+      return `${month}/${day}(${dayOfWeek})`;
+    }
+
+    // 週の表示範囲を更新する関数
+    function updateWeekDisplay() {
+      const sunday = new Date(currentMonday);
+      sunday.setDate(currentMonday.getDate() + 6);
+      weekDisplay.textContent = `${formatDate(currentMonday)} - ${formatDate(sunday)}`;
+    }
+
+    // 週表示テーブルをレンダリングする関数
+    function renderWeeklyTable() {
+      dateRow.innerHTML = '<th>時間</th>'; // 時間列のヘッダーを初期化
+      weeklyTableBody.innerHTML = ''; // テーブルボディをクリア
+
+      const datesInWeek = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(currentMonday);
+        date.setDate(currentMonday.getDate() + i);
+        datesInWeek.push(date);
+
+        const th = document.createElement('th');
+        th.textContent = formatDate(date);
+        dateRow.appendChild(th);
+      }
+
+      // 4時スタートで24時間分の行を生成
+      for (let i = 0; i < 24; i++) {
+        const hour = (i + 4) % 24;
+        const timeKey = hour.toString().padStart(2, '0');
+        
+        const tr = document.createElement('tr');
+        const timeCell = document.createElement('td');
+        timeCell.textContent = `${timeKey}:00`;
+        tr.appendChild(timeCell);
+
+        datesInWeek.forEach(date => {
+          const td = document.createElement('td');
+          const dateStr = date.toISOString().split('T')[0];
+          const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+          const entry = dailyData[timeKey];
+
+          if (entry) {
+            // やったこと
+            const activityP = document.createElement('p');
+            activityP.innerHTML = `<strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}`;
+            td.appendChild(activityP);
+
+            // 気分と疲労度（「睡眠」の場合は非表示）
+            if (!entry.activity.includes("睡眠")) {
+              const moodFatigueP = document.createElement('p');
+              moodFatigueP.innerHTML = `<strong>気分:</strong> ${entry.mood === '' ? '―' : entry.mood}　<strong>疲労:</strong> ${entry.fatigue === '' ? '―' : entry.fatigue}`;
+              td.appendChild(moodFatigueP);
+            } else {
+                const sleepP = document.createElement('p');
+                sleepP.textContent = '睡眠中'; // 睡眠中は気分・疲労度を表示しない代わりにテキスト
+                td.appendChild(sleepP);
+            }
+            
+            // 自由記入欄
+            if (entry.free) {
+                const freeTxtP = document.createElement('p');
+                freeTxtP.innerHTML = `<strong>メモ:</strong> ${entry.free}`;
+                td.appendChild(freeTxtP);
+            }
+          } else {
+            td.textContent = '―'; // データがない場合
+          }
+
+          // DailyNoteのサマリーをセルの下部に追加
+          const dailyNote = dailyData.dailyNote;
+          if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'daily-summary';
+            if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
+            if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
+            if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
+            if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
+            td.appendChild(summaryDiv);
+          }
+
+          tr.appendChild(td);
+        });
+        weeklyTableBody.appendChild(tr);
+      }
+      updateWeekDisplay();
+    }
+
+    // イベントリスナー
+    prevWeekBtn.addEventListener('click', () => {
+      currentMonday.setDate(currentMonday.getDate() - 7);
+      renderWeeklyTable();
+    });
+
+    nextWeekBtn.addEventListener('click', () => {
+      currentMonday.setDate(currentMonday.getDate() + 7);
+      renderWeeklyTable();
+    });
+
+    // 画像保存ボタンのイベントリスナー
+    saveImageBtn.addEventListener('click', async (e) => {
+      e.preventDefault(); // デフォルトのリンク動作を防止
+
+      // テーブルコンテナを画像化の対象にする
+      const element = document.getElementById('weeklyTableContainer');
+
+      // html2canvasオプションでA4サイズに調整
+      // A4 (210mm x 297mm) をpxに変換 (dpi=96の場合)
+      const a4WidthPx = 210 / 25.4 * 96;
+      const a4HeightPx = 297 / 25.4 * 96;
+
+      // 現在の要素の幅と高さを取得
+      const originalWidth = element.offsetWidth;
+      const originalHeight = element.offsetHeight;
+
+      // 印刷用CSSを適用
+      const style = document.createElement('style');
+      style.innerHTML = `
+        @media print {
+            body { margin: 0; padding: 0; max-width: none; width: 210mm; height: 297mm; overflow: hidden; }
+            header, .week-navigation, .top-icons { display: none; }
+            #weeklyTableContainer {
+                border: none; box-shadow: none; padding: 0;
+                width: 100%; height: 100%; display: block; overflow: visible;
+            }
+            #weeklyTable { width: 100%; height: 100%; font-size: 0.7em; }
+            #weeklyTable th, #weeklyTable td { padding: 4px; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // html2canvasでスクリーンショット
+      // scaleを調整して、画像が高解像度になるようにする。
+      // A4に収まるように、元の幅とA4幅を比較して適切なscaleを計算。
+      // 縦長のコンテンツの場合、heightを基準にscaleを決めることも検討が必要。
+      // ここでは、contentWidthがA4幅に収まるように調整
+      const scale = a4WidthPx / originalWidth;
+      const finalScale = scale > 1 ? 1 : scale; // 拡大しすぎないように最大1倍
+
+      const canvas = await html2canvas(element, {
+          scale: 2, // 高解像度でレンダリング
+          useCORS: true,
+          // width: originalWidth, // 元の幅を使用
+          // height: originalHeight, // 元の高さを使用
+          windowWidth: element.scrollWidth, // スクロール領域全体をキャプチャ
+          windowHeight: element.scrollHeight,
+      });
+
+      // CanvasをA4サイズにトリミングまたはスケーリング
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = a4WidthPx;
+      outputCanvas.height = a4HeightPx;
+      const ctx = outputCanvas.getContext('2d');
+
+      // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
+      // 縦横比を維持しつつ、A4サイズにフィットさせる
+      const aspectRatio = canvas.width / canvas.height;
+      let drawWidth = a4WidthPx;
+      let drawHeight = a4WidthPx / aspectRatio;
+
+      if (drawHeight > a4HeightPx) {
+          drawHeight = a4HeightPx;
+          drawWidth = a4HeightPx * aspectRatio;
+      }
+
+      ctx.drawImage(canvas, (a4WidthPx - drawWidth) / 2, (a4HeightPx - drawHeight) / 2, drawWidth, drawHeight);
+
+      // 画像をダウンロード
+      const imgData = outputCanvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 印刷用CSSを元に戻す
+      document.head.removeChild(style);
+    });
+
+    // 初期レンダリング
+    renderWeeklyTable();
+  </script>
+</body>
+</html>
