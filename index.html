@@ -62,6 +62,23 @@
       border-bottom: 1px solid #ddd;
       cursor: pointer;
     }
+    /* ★修正: ヘッダー内の保存ボタンのスタイルを調整 */
+    .hour-header .save-btn-header {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 6px 12px; /* 少し小さめに */
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em; /* フォントサイズも調整 */
+      transition: background 0.2s;
+      margin-left: auto; /* 右端に寄せる */
+      flex-shrink: 0; /* 縮まないように */
+    }
+    .hour-header .save-btn-header:hover {
+      background: #3b78c5;
+    }
+
     .compact {
       display: none;
       padding: 10px 12px;
@@ -119,7 +136,8 @@
       box-sizing: border-box; /* パディングを考慮したサイズ計算 */
       min-width: 80px; /* 最小幅を設定 */
     }
-    .save-btn {
+    /* ★削除された要素のスタイルなので不要ですが、念のため残す場合はコメントアウト */
+    /* .save-btn {
       background: #4a90e2;
       color: white;
       border: none;
@@ -127,12 +145,12 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 1em;
-      transition: background 0.2s; /* ホバー効果 */
-      margin-top: 5px; /* 上部に少し余白 */
+      transition: background 0.2s;
+      margin-top: 5px;
     }
     .save-btn:hover {
       background: #3b78c5;
-    }
+    } */
     .daily-note {
       background: white;
       border: 1px solid #ddd;
@@ -197,11 +215,10 @@
     const recordArea = document.getElementById('recordArea');
     const alcoholChk = document.getElementById('alcohol');
     const caffeineChk = document.getElementById('caffeine');
-    const intakeMemo = document.getElementById('intakeMemo'); // ★追加: 摂取状況メモ
+    const intakeMemo = document.getElementById('intakeMemo');
     const dailyMemo = document.getElementById('dailyMemo');
 
     // 気分と疲労度の自動入力のために直前の値を保持する変数
-    // この変数はrender()が呼ばれるたびにリセットされる
     let lastMood = 50;
     let lastFatigue = 50;
 
@@ -211,40 +228,30 @@
      */
     function render() {
       const dateStr = document.getElementById('recordDate').value;
-      // レンダリング開始時に現在の日のデータを全て読み込む
-      // データが存在しない場合は空のオブジェクトを初期値とする
       const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      recordArea.innerHTML = ''; // 既存のUI要素を全てクリアして再生成
+      recordArea.innerHTML = '';
 
-      // DailyNote（日ごとのメモ等）の表示とデータ読み込み
       if (data.dailyNote) {
-        alcoholChk.checked = data.dailyNote.alcohol || false; // undefinedの場合はfalse
-        caffeineChk.checked = data.dailyNote.caffeine || false; // undefinedの場合はfalse
-        intakeMemo.value = data.dailyNote.intakeMemo || ''; // ★追加: 摂取状況メモの読み込み
+        alcoholChk.checked = data.dailyNote.alcohol || false;
+        caffeineChk.checked = data.dailyNote.caffeine || false;
+        intakeMemo.value = data.dailyNote.intakeMemo || '';
         dailyMemo.value = data.dailyNote.memo || '';
       } else {
-        // dailyNoteがない場合は初期状態にリセット
         alcoholChk.checked = false;
         caffeineChk.checked = false;
-        intakeMemo.value = ''; // ★追加: 摂取状況メモのリセット
+        intakeMemo.value = '';
         dailyMemo.value = '';
       }
 
-      // 気分と疲労度の自動入力のための初期値リセット
       lastMood = 50;
       lastFatigue = 50;
 
-      // 24時間分の入力ブロックを生成
       for (let i = 0; i < 24; i++) {
-        const hour = (i + 4) % 24; // 4時スタートで0-23時を順に処理
-        const key = hour.toString().padStart(2,'0'); // "00", "01", ... "23"
+        const hour = (i + 4) % 24;
+        const key = hour.toString().padStart(2,'0');
 
-        // 各時間帯のデータを取得。存在しない場合はデフォルト値で初期化
         let entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
 
-        // ★気分と疲労度の自動入力ロジック
-        // 現在の時間帯のmood/fatigueがデフォルト値(50)であり、かつ「睡眠」ではない場合、直前の値を引き継ぐ
-        // 最初の時間帯(i=0)は自動入力の対象外
         if (i > 0) {
             if (entry.mood === 50 && !entry.activity.includes("睡眠")) {
                 entry.mood = lastMood;
@@ -253,8 +260,6 @@
                 entry.fatigue = lastFatigue;
             }
         }
-        // 現在の時間帯の気分と疲労度を次の時間帯のために保持
-        // 空欄（''）の場合は引き継がない
         if (entry.mood !== '') {
             lastMood = entry.mood;
         }
@@ -268,13 +273,13 @@
 
         const header = document.createElement('div');
         header.className = 'hour-header';
-        header.textContent = `${key}:00`; // 時間表示
+        header.textContent = `${key}:00`;
 
-        const btn = document.createElement('button');
-        btn.className = 'save-btn';
-        btn.textContent = '保存する';
+        // ★修正: 保存ボタンはヘッダー内にのみ生成
+        const saveBtnHeader = document.createElement('button');
+        saveBtnHeader.className = 'save-btn-header';
+        saveBtnHeader.textContent = '保存する'; // テキストを「保存する」に変更
 
-        // 折りたたみ時に表示されるコンパクトな情報
         const compact = document.createElement('div');
         compact.className = 'compact';
         compact.innerHTML = `
@@ -283,11 +288,9 @@
           <strong>メモ:</strong> ${entry.free || '―'}
         `;
 
-        // 展開時に表示される詳細入力フォーム
         const content = document.createElement('div');
         content.className = entry.folded ? 'hour-content hidden' : 'hour-content';
 
-        // --- やったこと（チェックボックスグリッド）の生成 ---
         const ckGrid = document.createElement('div');
         ckGrid.className = 'checkbox-grid';
         tags.forEach(tag => {
@@ -295,42 +298,33 @@
           const chk = document.createElement('input');
           chk.type = 'checkbox';
           chk.value = tag;
-          chk.checked = entry.activity.includes(tag); // 既存のデータに基づいてチェック状態を設定
+          chk.checked = entry.activity.includes(tag);
           
-          // チェックボックスのクリックイベントが親のheaderのクリックイベントに伝播しないように停止
-          chk.addEventListener('click', e => e.stopPropagation()); 
+          chk.addEventListener('click', e => e.stopPropagation());
           
-          // チェックボックスの状態変更時の処理
           chk.addEventListener('change', () => {
             if (chk.checked) {
               if (tag === "睡眠") {
-                // 「睡眠」が選択されたら、他の全ての活動を解除し、「睡眠」のみにする
                 entry.activity = ["睡眠"];
-                // 気分・疲労度を空欄にし、UIも無効化
                 selMood.value = '';
                 selMood.disabled = true;
                 selFat.value = '';
                 selFat.disabled = true;
-                // 他のチェックボックスの状態をUIに反映
                 ckGrid.querySelectorAll('input[type="checkbox"]').forEach(otherChk => {
                   if (otherChk !== chk) {
                     otherChk.checked = false;
                   }
                 });
               } else {
-                // 「睡眠」以外のタグが選択されたら、「睡眠」タグを解除
                 entry.activity = entry.activity.filter(t => t !== "睡眠");
-                // 「睡眠」が解除されたので、気分・疲労度を有効化し、現在の値に戻す（デフォルト50）
                 selMood.disabled = false;
                 selFat.disabled = false;
-                if (!entry.activity.includes(tag)) { // 既に含まれていなければ追加
+                if (!entry.activity.includes(tag)) {
                   entry.activity.push(tag);
                 }
               }
             } else {
-              // チェックが外されたらそのタグをactivityから削除
               entry.activity = entry.activity.filter(t => t !== tag);
-              // もし「睡眠」が外された場合、気分・疲労度を有効化
               if (tag === "睡眠") {
                  selMood.disabled = false;
                  selFat.disabled = false;
@@ -342,16 +336,14 @@
           ckGrid.appendChild(lbl);
         });
 
-        // --- 自由記入欄の生成 ---
         const freeTxt = document.createElement('input');
         freeTxt.type = 'text';
         freeTxt.placeholder = '自由記入';
-        freeTxt.value = entry.free; // 既存の値があれば設定
+        freeTxt.value = entry.free;
         freeTxt.addEventListener('input', () => {
-          entry.free = freeTxt.value; // 入力内容をentryオブジェクトにリアルタイムで反映
+          entry.free = freeTxt.value;
         });
 
-        // --- 気分・疲労度選択欄の生成 ---
         const row = document.createElement('div');
         row.className = 'flex-row';
 
@@ -361,20 +353,17 @@
         moods.forEach(m => {
           const o = document.createElement('option');
           o.value = o.textContent = m;
-          if (m === entry.mood) o.selected = true; // 既存の値に基づいて選択状態を設定
+          if (m === entry.mood) o.selected = true;
           selMood.appendChild(o);
         });
-        // 「睡眠」が選択されている場合は気分を無効化
         if (entry.activity.includes("睡眠")) {
             selMood.value = '';
             selMood.disabled = true;
         } else {
             selMood.disabled = false;
         }
-        // 気分の変更イベントリスナー
         selMood.addEventListener('change', () => {
             entry.mood = parseInt(selMood.value);
-            // ユーザーが手動で変更したら、その値をlastMoodに設定し、自動入力の基準とする
             lastMood = entry.mood;
         });
 
@@ -384,91 +373,84 @@
         moods.forEach(f => {
           const o = document.createElement('option');
           o.value = o.textContent = f;
-          if (f === entry.fatigue) o.selected = true; // 既存の値に基づいて選択状態を設定
+          if (f === entry.fatigue) o.selected = true;
           selFat.appendChild(o);
         });
-        // 「睡眠」が選択されている場合は疲労度を無効化
         if (entry.activity.includes("睡眠")) {
             selFat.value = '';
             selFat.disabled = true;
         } else {
             selFat.disabled = false;
         }
-        // 疲労度の変更イベントリスナー
         selFat.addEventListener('change', () => {
             entry.fatigue = parseInt(selFat.value);
-            // ユーザーが手動で変更したら、その値をlastFatigueに設定し、自動入力の基準とする
             lastFatigue = entry.fatigue;
         });
 
         row.append(moodLabel, selMood, fatigueLabel, selFat);
         
-        // --- 各要素をcontentに追加 ---
-        content.append(ckGrid, freeTxt, row, btn); 
+        // ★修正: contentからは保存ボタンを削除
+        content.append(ckGrid, freeTxt, row);
         
-        // --- headerとcontentをblockに追加 ---
-        header.appendChild(btn.cloneNode(true)); // header内にも保存ボタン（ヘッダークリックでの保存用）
-        header.lastChild.textContent = '保存'; // テキストを「保存」に変更（オプション）
-        header.lastChild.className = 'save-btn-header'; // クラス名を変更して区別
-        header.lastChild.style.marginLeft = 'auto'; // 右端に寄せる
-
+        // ★修正: ヘッダーに保存ボタンを追加
+        header.appendChild(saveBtnHeader);
         block.append(header, compact, content);
         recordArea.append(block);
 
         // --- イベントリスナーの設定 ---
 
-        // 各時間帯のヘッダーをクリックで折りたたみ/展開
-        header.onclick = () => {
-          entry.folded = !entry.folded;
-          // dataオブジェクト全体をlocalStorageから読み込み、現在の時間帯のentryを更新してから保存
-          const currentDataOnHeaderClick = JSON.parse(localStorage.getItem(dateStr) || '{}');
-          currentDataOnHeaderClick[key] = entry; // 現在のentryオブジェクトをcurrentDataOnHeaderClickに格納
-          currentDataOnHeaderClick.dailyNote = currentDataOnHeaderClick.dailyNote || {}; // dailyNoteがなければ初期化
-          currentDataOnHeaderClick.dailyNote.alcohol = alcoholChk.checked;
-          currentDataOnHeaderClick.dailyNote.caffeine = caffeineChk.checked;
-          currentDataOnHeaderClick.dailyNote.intakeMemo = intakeMemo.value; // ★追加: 摂取状況メモの保存
-          currentDataOnHeaderClick.dailyNote.memo = dailyMemo.value;
-          localStorage.setItem(dateStr, JSON.stringify(currentDataOnHeaderClick)); // currentDataOnHeaderClickを保存
-          render(); // UIを再描画
+        // ヘッダー（保存ボタンを含む全体）をクリックで保存と折りたたみ/展開
+        header.onclick = (e) => {
+            // 保存ボタン以外がクリックされた場合のみ折りたたみ/展開
+            // 保存ボタンがクリックされたら、保存処理だけを行う
+            if (e.target !== saveBtnHeader) {
+                entry.folded = !entry.folded;
+                // ヘッダークリック時もデータを保存（折りたたみ状態の変更を保存）
+                const currentDataOnHeaderClick = JSON.parse(localStorage.getItem(dateStr) || '{}');
+                currentDataOnHeaderClick[key] = entry; 
+                currentDataOnHeaderClick.dailyNote = currentDataOnHeaderClick.dailyNote || {}; 
+                currentDataOnHeaderClick.dailyNote.alcohol = alcoholChk.checked;
+                currentDataOnHeaderClick.dailyNote.caffeine = caffeineChk.checked;
+                currentDataOnHeaderClick.dailyNote.intakeMemo = intakeMemo.value;
+                currentDataOnHeaderClick.dailyNote.memo = dailyMemo.value;
+                localStorage.setItem(dateStr, JSON.stringify(currentDataOnHeaderClick)); 
+                render(); 
+            }
+        };
+        
+        // ヘッダー内の保存ボタンのクリックイベント（保存と折りたたみ）
+        saveBtnHeader.onclick = (e) => {
+            e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
+            // 保存ボタンが押されたときに、現在のUI上の値をデータに反映
+            entry.mood = entry.activity.includes("睡眠") ? '' : (selMood.value === '' ? '' : parseInt(selMood.value));
+            entry.fatigue = entry.activity.includes("睡眠") ? '' : (selFat.value === '' ? '' : parseInt(selFat.value));
+            entry.free = freeTxt.value;
+            entry.folded = true; // 保存時は常に折りたたむ
+            
+            const currentData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+            currentData[key] = entry;
+
+            currentData.dailyNote = currentData.dailyNote || {};
+            currentData.dailyNote.alcohol = alcoholChk.checked;
+            currentData.dailyNote.caffeine = caffeineChk.checked;
+            currentData.dailyNote.intakeMemo = intakeMemo.value;
+            currentData.dailyNote.memo = dailyMemo.value;
+            localStorage.setItem(dateStr, JSON.stringify(currentData));
+            render();
         };
 
-        // 各時間帯の保存ボタンをクリックで保存と折りたたみ
-        btn.onclick = () => {
-          // 保存ボタンが押されたときに、現在のUI上の値をデータに反映
-          entry.mood = entry.activity.includes("睡眠") ? '' : (selMood.value === '' ? '' : parseInt(selMood.value));
-          entry.fatigue = entry.activity.includes("睡眠") ? '' : (selFat.value === '' ? '' : parseInt(selFat.value));
-          entry.free = freeTxt.value;
-          entry.folded = true; // 保存時に折りたたむ
-          
-          // dataオブジェクト全体をlocalStorageから読み込み、現在の時間帯のentryを更新してから保存
-          const currentData = JSON.parse(localStorage.getItem(dateStr) || '{}');
-          currentData[key] = entry; // 現在のentryオブジェクトをcurrentDataに格納
-
-          currentData.dailyNote = currentData.dailyNote || {}; // dailyNoteがなければ初期化
-          currentData.dailyNote.alcohol = alcoholChk.checked;
-          currentData.dailyNote.caffeine = caffeineChk.checked;
-          currentData.dailyNote.intakeMemo = intakeMemo.value; // ★追加: 摂取状況メモの保存
-          currentData.dailyNote.memo = dailyMemo.value;
-          localStorage.setItem(dateStr, JSON.stringify(currentData)); // currentDataを保存
-          render(); // 保存後にUIを再描画して最新の状態にする
-        };
-
-        // compact表示の制御
         compact.style.display = entry.folded ? 'block' : 'none';
-        header.lastChild.style.display = entry.folded ? 'none' : 'block'; // 折りたたみ時はヘッダーの保存ボタンを非表示に
+        // ★修正: ヘッダー内の保存ボタンは常に表示されるようにする（折りたたみ時の非表示ロジック削除）
+        // header.lastChild.style.display = entry.folded ? 'none' : 'block'; 
       }
     }
 
     // --- アプリ初期化とグローバルイベントリスナー ---
 
-    // 日付選択のイベントリスナー (日付が変わったら再レンダリング)
     const dp = document.getElementById('recordDate');
-    dp.value = new Date().toISOString().split('T')[0]; // 初期表示は今日の日付
+    dp.value = new Date().toISOString().split('T')[0];
     dp.onchange = render;
 
-    // dailyNoteのチェックボックスとテキストエリアの変更イベントリスナー
-    // これらの要素はrender()で再生成されないため、イベントリスナーは一度だけ設定すればOK
-    // ただし、値を変更したら即座にlocalStorageに反映させる
     alcoholChk.addEventListener('change', () => {
       const dateStr = document.getElementById('recordDate').value;
       const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
@@ -485,7 +467,6 @@
       localStorage.setItem(dateStr, JSON.stringify(data));
     });
 
-    // ★追加: 摂取状況メモの入力イベントリスナー
     intakeMemo.addEventListener('input', () => {
       const dateStr = document.getElementById('recordDate').value;
       const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
@@ -502,7 +483,7 @@
       localStorage.setItem(dateStr, JSON.stringify(data));
     });
 
-    render(); // アプリ初期表示
+    render();
   </script>
 </body>
 </html>
