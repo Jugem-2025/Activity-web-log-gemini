@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>タグ編集</title>
+  <title>活動記録</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 600px; /* タグ編集ページは少し狭めに */
+      max-width: 800px;
       margin: auto;
       background: #f5f6fa;
       color: #333;
-      padding: 15px;
-      box-sizing: border-box;
+      padding: 15px; /* 全体のパディングを追加 */
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
     }
     header {
       display: flex;
@@ -22,7 +22,7 @@
       color: white;
       padding: 12px 16px;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 20px; /* 下部に余白を追加 */
     }
     header h1 {
       font-size: 1.4em;
@@ -33,281 +33,457 @@
       color: white;
       font-size: 1.4em;
       text-decoration: none;
-      padding: 5px;
+      padding: 5px; /* クリックしやすいようにパディング */
     }
-    .tag-section {
+    .date-picker {
+      display: block;
+      margin: 16px 0;
+      font-size: 1em;
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
+    }
+    .hour-block {
       background: white;
       border: 1px solid #ddd;
       border-radius: 6px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      padding: 15px;
+      overflow: hidden; /* 子要素のmarginがはみ出さないように */
     }
-    .tag-section h2 {
-      font-size: 1.2em;
-      margin-top: 0;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-      margin-bottom: 15px;
-    }
-
-    /* タグリストのスタイル */
-    #tagList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #tagList li {
-      background: #e8f0fe;
-      border: 1px solid #d0e0fb;
-      padding: 8px 12px;
-      margin-bottom: 8px;
-      border-radius: 4px;
+    .hour-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      cursor: grab; /* ドラッグ可能であることを示すカーソル */
-      transition: background 0.2s, transform 0.2s; /* ホバー・ドラッグ時のアニメーション */
+      padding: 8px 12px;
+      background: #f0f4f8;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
     }
-    #tagList li.dragging {
-        opacity: 0.5; /* ドラッグ中の要素を半透明に */
-        transform: scale(1.02);
-    }
-    #tagList li:hover {
-        background: #d0e0fb;
-    }
-    #tagList li span {
-      flex-grow: 1; /* タグ名が領域を広げる */
-      font-weight: bold;
-    }
-    #tagList li button {
-      background: #dc3545; /* 削除ボタンの色 */
+    /* ★修正: ヘッダー内の保存ボタンのスタイルを調整 */
+    .hour-header .save-btn-header {
+      background: #4a90e2;
       color: white;
       border: none;
-      padding: 4px 8px;
-      border-radius: 3px;
+      padding: 6px 12px; /* 少し小さめに */
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 0.8em;
-      margin-left: 10px;
+      font-size: 0.9em; /* フォントサイズも調整 */
       transition: background 0.2s;
+      margin-left: auto; /* 右端に寄せる */
+      flex-shrink: 0; /* 縮まないように */
     }
-    #tagList li button:hover {
-      background: #c82333;
+    .hour-header .save-btn-header:hover {
+      background: #3b78c5;
     }
 
-    /* タグ追加フォーム */
-    .add-tag-form {
-      display: flex;
-      margin-top: 15px;
-      gap: 10px;
+    .compact {
+      display: none;
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #555;
+      line-height: 1.5; /* 行の高さを調整 */
     }
-    .add-tag-form input[type="text"] {
-      flex-grow: 1;
+    .hour-content {
+      padding: 10px 12px;
+    }
+    .hour-content.hidden {
+      display: none;
+    }
+    .checkbox-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .checkbox-grid label {
+      background: #e8f0fe;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.95em;
+      display: flex;
+      align-items: center;
+      transition: background 0.2s; /* ホバー効果 */
+    }
+    .checkbox-grid label:hover {
+        background: #d0e0fb;
+    }
+    .checkbox-grid input[type="checkbox"] {
+      margin-right: 4px;
+      cursor: pointer;
+    }
+    .flex-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap; /* スマホでの折り返し対応 */
+    }
+    .flex-row label {
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .flex-row select,
+    .flex-row input[type="text"] {
+      flex-grow: 1; /* スペースいっぱいに広がる */
+      padding: 6px;
+      font-size: 0.95em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
+      min-width: 80px; /* 最小幅を設定 */
+    }
+    /* ★削除された要素のスタイルなので不要ですが、念のため残す場合はコメントアウト */
+    /* .save-btn {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.2s;
+      margin-top: 5px;
+    }
+    .save-btn:hover {
+      background: #3b78c5;
+    } */
+    .daily-note {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 20px; /* 上部に余白を追加 */
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .daily-note label {
+      display: flex; /* チェックボックスとテキストを揃える */
+      align-items: center;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    .daily-note input[type="checkbox"] {
+      margin-right: 6px;
+      cursor: pointer;
+    }
+    .daily-note textarea {
+      width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 1em;
-    }
-    .add-tag-form button {
-      background: #28a745; /* 追加ボタンの色 */
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1em;
-      transition: background 0.2s;
-    }
-    .add-tag-form button:hover {
-      background: #218838;
-    }
-
-    /* 保存ボタン */
-    #saveTagsBtn {
-        display: block;
-        width: 100%;
-        background: #007bff; /* 保存ボタンの色 */
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1.1em;
-        margin-top: 20px;
-        transition: background 0.2s;
-    }
-    #saveTagsBtn:hover {
-        background: #0056b3;
+      resize: vertical;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
+      margin-top: 6px; /* 上部に余白を追加 */
+      font-size: 0.95em;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>タグ編集</h1>
+    <h1>活動記録</h1>
     <div class="top-icons">
-      <a href="index.html" title="活動記録">✏️</a>
+      <a href="weekly.html" title="週間表示">📅</a>
+      <a href="tags.html" title="タグ編集">⚙️</a>
     </div>
   </header>
 
-  <div class="tag-section">
-    <h2>タグリスト（ドラッグで並べ替え可能）</h2>
-    <ul id="tagList">
-      </ul>
-    <div class="add-tag-form">
-      <input type="text" id="newTagInput" placeholder="新しいタグ名を入力">
-      <button id="addTagBtn">追加</button>
-    </div>
-    <button id="saveTagsBtn">タグを保存</button>
+  <input type="date" id="recordDate" class="date-picker">
+  <div id="recordArea"></div>
+
+  <div class="daily-note">
+    <label><input type="checkbox" id="alcohol"> アルコール</label>
+    <label><input type="checkbox" id="caffeine"> カフェイン</label>
+    <label>上記摂取状況：</label>
+    <textarea id="intakeMemo" rows="2" placeholder="アルコールやカフェインの含まれる飲料と量を具体的に記入"></textarea>
+    <label>メモ・備考：</label>
+    <textarea id="dailyMemo" rows="3" placeholder="自由記入"></textarea>
   </div>
 
   <script>
-    // デフォルトタグの定義
-    const defaultTags = ["起床", "シャワー・風呂", "朝食", "昼食", "夕食", "外出", "移動", "個人課題", "講義", "帰宅", "家事", "休憩", "就寝", "薬", "睡眠"];
-    // localStorageから現在のタグを読み込む。なければデフォルトタグを使用
-    let tags = JSON.parse(localStorage.getItem("tags")) || [...defaultTags]; // スプレッド構文でコピーし、参照を切る
+    // デフォルトタグの定義 (localStorageになければこれを使う)
+    const defaultTags = ["起床","シャワー・風呂","朝食","昼食","夕食","外出","移動","個人課題","講義","帰宅","家事","休憩","就寝","薬","睡眠"];
+    // localStorageからタグを読み込む。なければデフォルトタグを使用
+    const tags = JSON.parse(localStorage.getItem("tags")) || defaultTags;
+    // 気分・疲労度の選択肢 (0から100まで5刻み)
+    const moods = Array.from({ length: 21 }, (_, i) => i * 5);
 
-    const tagList = document.getElementById('tagList');
-    const newTagInput = document.getElementById('newTagInput');
-    const addTagBtn = document.getElementById('addTagBtn');
-    const saveTagsBtn = document.getElementById('saveTagsBtn');
+    // DOM要素の取得
+    const recordArea = document.getElementById('recordArea');
+    const alcoholChk = document.getElementById('alcohol');
+    const caffeineChk = document.getElementById('caffeine');
+    const intakeMemo = document.getElementById('intakeMemo');
+    const dailyMemo = document.getElementById('dailyMemo');
 
-    let draggedItem = null; // ドラッグ中の要素を保持
-
-    /**
-     * タグリストをLocalStorageから読み込み、UIにレンダリングする関数
-     */
-    function renderTags() {
-      tagList.innerHTML = ''; // リストをクリア
-
-      tags.forEach((tag, index) => {
-        const li = document.createElement('li');
-        li.textContent = tag;
-        li.setAttribute('draggable', 'true'); // ドラッグ可能にする
-        li.dataset.index = index; // 元のインデックスを保持（ドラッグ用）
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '削除';
-        deleteBtn.addEventListener('click', () => {
-          // タグを削除
-          tags.splice(index, 1); // 配列から要素を削除
-          renderTags(); // UIを再描画
-          // ★重要: タグを削除しただけではlocalStorageに保存されないので、保存ボタンを押す必要がある
-          // 自動保存にする場合はここに saveTags() を呼び出す
-        });
-
-        li.appendChild(deleteBtn);
-        tagList.appendChild(li);
-      });
-
-      // ドラッグ＆ドロップイベントリスナーの設定
-      addDragAndDropListeners();
-    }
+    // 気分と疲労度の自動入力のために直前の値を保持する変数
+    let lastMood = 50;
+    let lastFatigue = 50;
 
     /**
-     * タグをLocalStorageに保存する関数
+     * アプリのUIをレンダリング（描画）する関数
+     * 選択されている日付に基づいて、LocalStorageからデータを読み込み、表示を更新する
      */
-    function saveTags() {
-      localStorage.setItem("tags", JSON.stringify(tags));
-      alert('タグが保存されました！');
-    }
+    function render() {
+      const dateStr = document.getElementById('recordDate').value;
+      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      recordArea.innerHTML = '';
 
-    /**
-     * ドラッグ＆ドロップ関連のイベントリスナーを設定する関数
-     */
-    function addDragAndDropListeners() {
-      const listItems = tagList.querySelectorAll('li');
+      if (data.dailyNote) {
+        alcoholChk.checked = data.dailyNote.alcohol || false;
+        caffeineChk.checked = data.dailyNote.caffeine || false;
+        intakeMemo.value = data.dailyNote.intakeMemo || '';
+        dailyMemo.value = data.dailyNote.memo || '';
+      } else {
+        alcoholChk.checked = false;
+        caffeineChk.checked = false;
+        intakeMemo.value = '';
+        dailyMemo.value = '';
+      }
 
-      listItems.forEach(item => {
-        item.addEventListener('dragstart', (e) => {
-          draggedItem = item;
-          setTimeout(() => {
-            item.classList.add('dragging'); // ドラッグ中のスタイルを適用
-          }, 0); // DOM更新を待つ
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/html', item.innerHTML); // データ転送（ここでは使わないが必須）
-        });
+      lastMood = 50;
+      lastFatigue = 50;
 
-        item.addEventListener('dragend', () => {
-          draggedItem.classList.remove('dragging');
-          draggedItem = null;
-        });
+      for (let i = 0; i < 24; i++) {
+        const hour = (i + 4) % 24;
+        const key = hour.toString().padStart(2,'0');
 
-        item.addEventListener('dragover', (e) => {
-          e.preventDefault(); // ドロップを許可するためにデフォルト動作をキャンセル
-          if (e.target.tagName === 'LI' && e.target !== draggedItem) {
-            const boundingBox = e.target.getBoundingClientRect();
-            const offset = boundingBox.y + (boundingBox.height / 2);
-            // 要素の上半分か下半分かで挿入位置を判断
-            if (e.clientY < offset) {
-              tagList.insertBefore(draggedItem, e.target);
-            } else {
-              tagList.insertBefore(draggedItem, e.target.nextSibling);
+        let entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+
+        if (i > 0) {
+            if (entry.mood === 50 && !entry.activity.includes("睡眠")) {
+                entry.mood = lastMood;
             }
-          }
+            if (entry.fatigue === 50 && !entry.activity.includes("睡眠")) {
+                entry.fatigue = lastFatigue;
+            }
+        }
+        if (entry.mood !== '') {
+            lastMood = entry.mood;
+        }
+        if (entry.fatigue !== '') {
+            lastFatigue = entry.fatigue;
+        }
+
+        // --- UI要素の生成 ---
+        const block = document.createElement('div');
+        block.className = 'hour-block';
+
+        const header = document.createElement('div');
+        header.className = 'hour-header';
+        header.textContent = `${key}:00`;
+
+        // ★修正: 保存ボタンはヘッダー内にのみ生成
+        const saveBtnHeader = document.createElement('button');
+        saveBtnHeader.className = 'save-btn-header';
+        saveBtnHeader.textContent = '保存する'; // テキストを「保存する」に変更
+
+        const compact = document.createElement('div');
+        compact.className = 'compact';
+        compact.innerHTML = `
+          <strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}<br>
+          <strong>気分:</strong> ${entry.mood === '' ? '―' : entry.mood}　<strong>疲労:</strong> ${entry.fatigue === '' ? '―' : entry.fatigue}<br>
+          <strong>メモ:</strong> ${entry.free || '―'}
+        `;
+
+        const content = document.createElement('div');
+        content.className = entry.folded ? 'hour-content hidden' : 'hour-content';
+
+        const ckGrid = document.createElement('div');
+        ckGrid.className = 'checkbox-grid';
+        tags.forEach(tag => {
+          const lbl = document.createElement('label');
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.value = tag;
+          chk.checked = entry.activity.includes(tag);
+          
+          chk.addEventListener('click', e => e.stopPropagation());
+          
+          chk.addEventListener('change', () => {
+            if (chk.checked) {
+              if (tag === "睡眠") {
+                entry.activity = ["睡眠"];
+                selMood.value = '';
+                selMood.disabled = true;
+                selFat.value = '';
+                selFat.disabled = true;
+                ckGrid.querySelectorAll('input[type="checkbox"]').forEach(otherChk => {
+                  if (otherChk !== chk) {
+                    otherChk.checked = false;
+                  }
+                });
+              } else {
+                entry.activity = entry.activity.filter(t => t !== "睡眠");
+                selMood.disabled = false;
+                selFat.disabled = false;
+                if (!entry.activity.includes(tag)) {
+                  entry.activity.push(tag);
+                }
+              }
+            } else {
+              entry.activity = entry.activity.filter(t => t !== tag);
+              if (tag === "睡眠") {
+                 selMood.disabled = false;
+                 selFat.disabled = false;
+              }
+            }
+          });
+          lbl.appendChild(chk);
+          lbl.appendChild(document.createTextNode(tag));
+          ckGrid.appendChild(lbl);
         });
 
-        item.addEventListener('drop', (e) => {
-          e.preventDefault();
-          // ここで、DOMの変更に基づいて`tags`配列を更新する
-          updateTagsArrayFromDOM();
+        const freeTxt = document.createElement('input');
+        freeTxt.type = 'text';
+        freeTxt.placeholder = '自由記入';
+        freeTxt.value = entry.free;
+        freeTxt.addEventListener('input', () => {
+          entry.free = freeTxt.value;
         });
-      });
 
-      // リスト全体に対する dragover/drop イベント（リストの最後にドロップされた場合などに必要）
-      tagList.addEventListener('dragover', (e) => {
-          e.preventDefault();
-      });
-      tagList.addEventListener('drop', (e) => {
-          e.preventDefault();
-          if (draggedItem && !tagList.contains(draggedItem)) { // リスト外から戻ってきた場合など
-              tagList.appendChild(draggedItem);
-              updateTagsArrayFromDOM();
-          }
-      });
+        const row = document.createElement('div');
+        row.className = 'flex-row';
+
+        const moodLabel = document.createElement('label');
+        moodLabel.textContent = "気分:";
+        const selMood = document.createElement('select');
+        moods.forEach(m => {
+          const o = document.createElement('option');
+          o.value = o.textContent = m;
+          if (m === entry.mood) o.selected = true;
+          selMood.appendChild(o);
+        });
+        if (entry.activity.includes("睡眠")) {
+            selMood.value = '';
+            selMood.disabled = true;
+        } else {
+            selMood.disabled = false;
+        }
+        selMood.addEventListener('change', () => {
+            entry.mood = parseInt(selMood.value);
+            lastMood = entry.mood;
+        });
+
+        const fatigueLabel = document.createElement('label');
+        fatigueLabel.textContent = "疲労度:";
+        const selFat = document.createElement('select');
+        moods.forEach(f => {
+          const o = document.createElement('option');
+          o.value = o.textContent = f;
+          if (f === entry.fatigue) o.selected = true;
+          selFat.appendChild(o);
+        });
+        if (entry.activity.includes("睡眠")) {
+            selFat.value = '';
+            selFat.disabled = true;
+        } else {
+            selFat.disabled = false;
+        }
+        selFat.addEventListener('change', () => {
+            entry.fatigue = parseInt(selFat.value);
+            lastFatigue = entry.fatigue;
+        });
+
+        row.append(moodLabel, selMood, fatigueLabel, selFat);
+        
+        // ★修正: contentからは保存ボタンを削除
+        content.append(ckGrid, freeTxt, row);
+        
+        // ★修正: ヘッダーに保存ボタンを追加
+        header.appendChild(saveBtnHeader);
+        block.append(header, compact, content);
+        recordArea.append(block);
+
+        // --- イベントリスナーの設定 ---
+
+        // ヘッダー（保存ボタンを含む全体）をクリックで保存と折りたたみ/展開
+        header.onclick = (e) => {
+            // 保存ボタン以外がクリックされた場合のみ折りたたみ/展開
+            // 保存ボタンがクリックされたら、保存処理だけを行う
+            if (e.target !== saveBtnHeader) {
+                entry.folded = !entry.folded;
+                // ヘッダークリック時もデータを保存（折りたたみ状態の変更を保存）
+                const currentDataOnHeaderClick = JSON.parse(localStorage.getItem(dateStr) || '{}');
+                currentDataOnHeaderClick[key] = entry; 
+                currentDataOnHeaderClick.dailyNote = currentDataOnHeaderClick.dailyNote || {}; 
+                currentDataOnHeaderClick.dailyNote.alcohol = alcoholChk.checked;
+                currentDataOnHeaderClick.dailyNote.caffeine = caffeineChk.checked;
+                currentDataOnHeaderClick.dailyNote.intakeMemo = intakeMemo.value;
+                currentDataOnHeaderClick.dailyNote.memo = dailyMemo.value;
+                localStorage.setItem(dateStr, JSON.stringify(currentDataOnHeaderClick)); 
+                render(); 
+            }
+        };
+        
+        // ヘッダー内の保存ボタンのクリックイベント（保存と折りたたみ）
+        saveBtnHeader.onclick = (e) => {
+            e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
+            // 保存ボタンが押されたときに、現在のUI上の値をデータに反映
+            entry.mood = entry.activity.includes("睡眠") ? '' : (selMood.value === '' ? '' : parseInt(selMood.value));
+            entry.fatigue = entry.activity.includes("睡眠") ? '' : (selFat.value === '' ? '' : parseInt(selFat.value));
+            entry.free = freeTxt.value;
+            entry.folded = true; // 保存時は常に折りたたむ
+            
+            const currentData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+            currentData[key] = entry;
+
+            currentData.dailyNote = currentData.dailyNote || {};
+            currentData.dailyNote.alcohol = alcoholChk.checked;
+            currentData.dailyNote.caffeine = caffeineChk.checked;
+            currentData.dailyNote.intakeMemo = intakeMemo.value;
+            currentData.dailyNote.memo = dailyMemo.value;
+            localStorage.setItem(dateStr, JSON.stringify(currentData));
+            render();
+        };
+
+        compact.style.display = entry.folded ? 'block' : 'none';
+        // ★修正: ヘッダー内の保存ボタンは常に表示されるようにする（折りたたみ時の非表示ロジック削除）
+        // header.lastChild.style.display = entry.folded ? 'none' : 'block'; 
+      }
     }
 
-    /**
-     * DOMの現在の並び順に基づいて、tags配列を更新する関数
-     */
-    function updateTagsArrayFromDOM() {
-      const newOrderTags = [];
-      tagList.querySelectorAll('li').forEach(li => {
-        // 削除ボタンの子要素を除外してテキストを取得
-        let tagName = li.firstChild.textContent.trim();
-        newOrderTags.push(tagName);
-      });
-      tags = newOrderTags; // tags配列を更新
-      // ★注意: ここでlocalStorageには保存しない。保存ボタンで実行
-      // console.log("Tags array updated from DOM:", tags);
-    }
+    // --- アプリ初期化とグローバルイベントリスナー ---
 
+    const dp = document.getElementById('recordDate');
+    dp.value = new Date().toISOString().split('T')[0];
+    dp.onchange = render;
 
-    // --- イベントリスナー ---
-
-    // 新しいタグ追加ボタン
-    addTagBtn.addEventListener('click', () => {
-      const newTag = newTagInput.value.trim();
-      if (newTag && !tags.includes(newTag)) { // 空でなく、重複しない場合のみ追加
-        tags.push(newTag);
-        newTagInput.value = ''; // 入力欄をクリア
-        renderTags(); // UIを再描画
-      } else if (tags.includes(newTag)) {
-        alert('そのタグは既に存在します。');
-      }
+    alcoholChk.addEventListener('change', () => {
+      const dateStr = document.getElementById('recordDate').value;
+      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      data.dailyNote = data.dailyNote || {};
+      data.dailyNote.alcohol = alcoholChk.checked;
+      localStorage.setItem(dateStr, JSON.stringify(data));
     });
 
-    // Enterキーでもタグを追加できるように
-    newTagInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        addTagBtn.click(); // 追加ボタンのクリックイベントを発火
-      }
+    caffeineChk.addEventListener('change', () => {
+      const dateStr = document.getElementById('recordDate').value;
+      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      data.dailyNote = data.dailyNote || {};
+      data.dailyNote.caffeine = caffeineChk.checked;
+      localStorage.setItem(dateStr, JSON.stringify(data));
     });
 
-    // タグ保存ボタン
-    saveTagsBtn.addEventListener('click', saveTags);
+    intakeMemo.addEventListener('input', () => {
+      const dateStr = document.getElementById('recordDate').value;
+      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      data.dailyNote = data.dailyNote || {};
+      data.dailyNote.intakeMemo = intakeMemo.value;
+      localStorage.setItem(dateStr, JSON.stringify(data));
+    });
 
-    // 初期表示
-    renderTags();
+    dailyMemo.addEventListener('input', () => {
+      const dateStr = document.getElementById('recordDate').value;
+      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      data.dailyNote = data.dailyNote || {};
+      data.dailyNote.memo = dailyMemo.value;
+      localStorage.setItem(dateStr, JSON.stringify(data));
+    });
+
+    render();
   </script>
 </body>
 </html>
