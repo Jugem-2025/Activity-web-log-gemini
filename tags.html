@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>タグ編集</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 600px; /* タグ編集ページは少し狭めに */
+      margin: auto;
+      background: #f5f6fa;
+      color: #333;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #4a90e2;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: 1.4em;
+      margin: 0;
+    }
+    .top-icons a {
+      margin-left: 10px;
+      color: white;
+      font-size: 1.4em;
+      text-decoration: none;
+      padding: 5px;
+    }
+    .tag-section {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 15px;
+    }
+    .tag-section h2 {
+      font-size: 1.2em;
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+    }
+
+    /* タグリストのスタイル */
+    #tagList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #tagList li {
+      background: #e8f0fe;
+      border: 1px solid #d0e0fb;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: grab; /* ドラッグ可能であることを示すカーソル */
+      transition: background 0.2s, transform 0.2s; /* ホバー・ドラッグ時のアニメーション */
+    }
+    #tagList li.dragging {
+        opacity: 0.5; /* ドラッグ中の要素を半透明に */
+        transform: scale(1.02);
+    }
+    #tagList li:hover {
+        background: #d0e0fb;
+    }
+    #tagList li span {
+      flex-grow: 1; /* タグ名が領域を広げる */
+      font-weight: bold;
+    }
+    #tagList li button {
+      background: #dc3545; /* 削除ボタンの色 */
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.8em;
+      margin-left: 10px;
+      transition: background 0.2s;
+    }
+    #tagList li button:hover {
+      background: #c82333;
+    }
+
+    /* タグ追加フォーム */
+    .add-tag-form {
+      display: flex;
+      margin-top: 15px;
+      gap: 10px;
+    }
+    .add-tag-form input[type="text"] {
+      flex-grow: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    .add-tag-form button {
+      background: #28a745; /* 追加ボタンの色 */
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.2s;
+    }
+    .add-tag-form button:hover {
+      background: #218838;
+    }
+
+    /* 保存ボタン */
+    #saveTagsBtn {
+        display: block;
+        width: 100%;
+        background: #007bff; /* 保存ボタンの色 */
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1.1em;
+        margin-top: 20px;
+        transition: background 0.2s;
+    }
+    #saveTagsBtn:hover {
+        background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>タグ編集</h1>
+    <div class="top-icons">
+      <a href="index.html" title="活動記録">✏️</a>
+    </div>
+  </header>
+
+  <div class="tag-section">
+    <h2>タグリスト（ドラッグで並べ替え可能）</h2>
+    <ul id="tagList">
+      </ul>
+    <div class="add-tag-form">
+      <input type="text" id="newTagInput" placeholder="新しいタグ名を入力">
+      <button id="addTagBtn">追加</button>
+    </div>
+    <button id="saveTagsBtn">タグを保存</button>
+  </div>
+
+  <script>
+    // デフォルトタグの定義
+    const defaultTags = ["起床", "シャワー・風呂", "朝食", "昼食", "夕食", "外出", "移動", "個人課題", "講義", "帰宅", "家事", "休憩", "就寝", "薬", "睡眠"];
+    // localStorageから現在のタグを読み込む。なければデフォルトタグを使用
+    let tags = JSON.parse(localStorage.getItem("tags")) || [...defaultTags]; // スプレッド構文でコピーし、参照を切る
+
+    const tagList = document.getElementById('tagList');
+    const newTagInput = document.getElementById('newTagInput');
+    const addTagBtn = document.getElementById('addTagBtn');
+    const saveTagsBtn = document.getElementById('saveTagsBtn');
+
+    let draggedItem = null; // ドラッグ中の要素を保持
+
+    /**
+     * タグリストをLocalStorageから読み込み、UIにレンダリングする関数
+     */
+    function renderTags() {
+      tagList.innerHTML = ''; // リストをクリア
+
+      tags.forEach((tag, index) => {
+        const li = document.createElement('li');
+        li.textContent = tag;
+        li.setAttribute('draggable', 'true'); // ドラッグ可能にする
+        li.dataset.index = index; // 元のインデックスを保持（ドラッグ用）
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '削除';
+        deleteBtn.addEventListener('click', () => {
+          // タグを削除
+          tags.splice(index, 1); // 配列から要素を削除
+          renderTags(); // UIを再描画
+          // ★重要: タグを削除しただけではlocalStorageに保存されないので、保存ボタンを押す必要がある
+          // 自動保存にする場合はここに saveTags() を呼び出す
+        });
+
+        li.appendChild(deleteBtn);
+        tagList.appendChild(li);
+      });
+
+      // ドラッグ＆ドロップイベントリスナーの設定
+      addDragAndDropListeners();
+    }
+
+    /**
+     * タグをLocalStorageに保存する関数
+     */
+    function saveTags() {
+      localStorage.setItem("tags", JSON.stringify(tags));
+      alert('タグが保存されました！');
+    }
+
+    /**
+     * ドラッグ＆ドロップ関連のイベントリスナーを設定する関数
+     */
+    function addDragAndDropListeners() {
+      const listItems = tagList.querySelectorAll('li');
+
+      listItems.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+          draggedItem = item;
+          setTimeout(() => {
+            item.classList.add('dragging'); // ドラッグ中のスタイルを適用
+          }, 0); // DOM更新を待つ
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', item.innerHTML); // データ転送（ここでは使わないが必須）
+        });
+
+        item.addEventListener('dragend', () => {
+          draggedItem.classList.remove('dragging');
+          draggedItem = null;
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault(); // ドロップを許可するためにデフォルト動作をキャンセル
+          if (e.target.tagName === 'LI' && e.target !== draggedItem) {
+            const boundingBox = e.target.getBoundingClientRect();
+            const offset = boundingBox.y + (boundingBox.height / 2);
+            // 要素の上半分か下半分かで挿入位置を判断
+            if (e.clientY < offset) {
+              tagList.insertBefore(draggedItem, e.target);
+            } else {
+              tagList.insertBefore(draggedItem, e.target.nextSibling);
+            }
+          }
+        });
+
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          // ここで、DOMの変更に基づいて`tags`配列を更新する
+          updateTagsArrayFromDOM();
+        });
+      });
+
+      // リスト全体に対する dragover/drop イベント（リストの最後にドロップされた場合などに必要）
+      tagList.addEventListener('dragover', (e) => {
+          e.preventDefault();
+      });
+      tagList.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (draggedItem && !tagList.contains(draggedItem)) { // リスト外から戻ってきた場合など
+              tagList.appendChild(draggedItem);
+              updateTagsArrayFromDOM();
+          }
+      });
+    }
+
+    /**
+     * DOMの現在の並び順に基づいて、tags配列を更新する関数
+     */
+    function updateTagsArrayFromDOM() {
+      const newOrderTags = [];
+      tagList.querySelectorAll('li').forEach(li => {
+        // 削除ボタンの子要素を除外してテキストを取得
+        let tagName = li.firstChild.textContent.trim();
+        newOrderTags.push(tagName);
+      });
+      tags = newOrderTags; // tags配列を更新
+      // ★注意: ここでlocalStorageには保存しない。保存ボタンで実行
+      // console.log("Tags array updated from DOM:", tags);
+    }
+
+
+    // --- イベントリスナー ---
+
+    // 新しいタグ追加ボタン
+    addTagBtn.addEventListener('click', () => {
+      const newTag = newTagInput.value.trim();
+      if (newTag && !tags.includes(newTag)) { // 空でなく、重複しない場合のみ追加
+        tags.push(newTag);
+        newTagInput.value = ''; // 入力欄をクリア
+        renderTags(); // UIを再描画
+      } else if (tags.includes(newTag)) {
+        alert('そのタグは既に存在します。');
+      }
+    });
+
+    // Enterキーでもタグを追加できるように
+    newTagInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addTagBtn.click(); // 追加ボタンのクリックイベントを発火
+      }
+    });
+
+    // タグ保存ボタン
+    saveTagsBtn.addEventListener('click', saveTags);
+
+    // 初期表示
+    renderTags();
+  </script>
+</body>
+</html>
