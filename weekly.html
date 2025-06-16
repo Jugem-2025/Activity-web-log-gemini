@@ -59,7 +59,7 @@
       font-weight: bold;
     }
 
-    /* ★週表示テーブルのスタイル */
+    /* 週表示テーブルのスタイル */
     #weeklyTableContainer {
       overflow-x: auto; /* 横スクロールを可能にする */
       background: white;
@@ -75,7 +75,6 @@
     }
     #weeklyTable th, #weeklyTable td {
       border: 1px solid #eee; /* セルの境界線 */
-      /* ★修正: セルの垂直パディングを減らす */
       padding: 4px 8px; /* 上下パディングを4pxに */
       text-align: left;
       vertical-align: top; /* 上揃え */
@@ -88,11 +87,9 @@
     }
     #weeklyTable td {
       background: white;
-      /* ★修正: 行間を狭める */
       line-height: 1.2; /* 行間を調整 */
     }
     #weeklyTable td p {
-        /* ★修正: 各行の上下マージンをなくす */
         margin: 0;
         padding: 0;
     }
@@ -102,7 +99,6 @@
     .daily-summary {
       font-size: 0.8em;
       color: #666;
-      /* ★修正: デイリーサマリーの上下マージンとパディングを調整 */
       margin-top: 3px; /* 上マージンを減らす */
       padding-top: 3px; /* 上パディングを減らす */
       border-top: 1px dashed #eee;
@@ -241,7 +237,7 @@
           const entry = dailyData[timeKey];
 
           if (entry) {
-            // ★修正: やったこと (内容のみ表示、Pタグは維持)
+            // やったこと (内容のみ表示、Pタグは維持)
             const activityP = document.createElement('p');
             activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
@@ -249,7 +245,7 @@
             // 気分と疲労度（「睡眠」の場合は非表示）
             if (!entry.activity.includes("睡眠")) {
               const moodFatigueP = document.createElement('p');
-              // ★修正: 気分→気, 疲労度→疲 で1行にまとめる
+              // 気分→気, 疲労度→疲 で1行にまとめる
               moodFatigueP.textContent = `気: ${entry.mood === '' ? '―' : entry.mood} 疲: ${entry.fatigue === '' ? '―' : entry.fatigue}`;
               td.appendChild(moodFatigueP);
             } else {
@@ -301,66 +297,84 @@
 
     // 画像保存ボタンのイベントリスナー
     saveImageBtn.addEventListener('click', async (e) => {
-      e.preventDefault(); // デフォルトのリンク動作を防止
+        e.preventDefault(); // デフォルトのリンク動作を防止
 
-      // テーブルコンテナを画像化の対象にする
-      const element = document.getElementById('weeklyTableContainer');
+        const element = document.getElementById('weeklyTableContainer');
 
-      // 印刷用CSSを適用 (既存のものを維持)
-      const style = document.createElement('style');
-      style.innerHTML = `
-        @media print {
+        // 印刷用CSSを適用するためのスタイル要素を作成
+        const printStyle = document.createElement('style');
+        printStyle.id = 'print-style'; // 後で削除するためにIDを設定
+        printStyle.innerHTML = `
             body { margin: 0; padding: 0; max-width: none; width: 210mm; height: 297mm; overflow: hidden; }
-            header, .week-navigation, .top-icons { display: none; }
+            header, .week-navigation, .top-icons { display: none !important; } /* !importantで優先 */
             #weeklyTableContainer {
                 border: none; box-shadow: none; padding: 0;
                 width: 100%; height: 100%; display: block; overflow: visible;
             }
             #weeklyTable { width: 100%; height: 100%; font-size: 0.7em; }
-            #weeklyTable th, #weeklyTable td { padding: 2px 4px; } /* 印刷時もコンパクトに */
+            #weeklyTable th, #weeklyTable td { padding: 2px 4px; }
+        `;
+        document.head.appendChild(printStyle);
+
+        // html2canvasで要素を画像化
+        const canvas = await html2canvas(element, {
+            scale: 2, // 高解像度でレンダリング
+            useCORS: true,
+            // 描画する要素の現在のスクロール幅と高さをそのまま使用
+            windowWidth: element.scrollWidth, 
+            windowHeight: element.scrollHeight,
+            // x, y, width, height オプションで要素の全体をキャプチャ
+            x: element.scrollLeft,
+            y: element.scrollTop,
+            width: element.scrollWidth,
+            height: element.scrollHeight,
+        });
+
+        // CanvasをA4サイズにトリミングまたはスケーリング
+        const a4WidthPx = 210 / 25.4 * 96; // A4幅 (mm) をpxに変換 (96dpiの場合)
+        const a4HeightPx = 297 / 25.4 * 96; // A4高さ (mm) をpxに変換
+
+        const outputCanvas = document.createElement('canvas');
+        outputCanvas.width = a4WidthPx;
+        outputCanvas.height = a4HeightPx;
+        const ctx = outputCanvas.getContext('2d');
+
+        // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
+        // アスペクト比を保ちつつ、A4サイズにフィットさせる
+        const canvasAspectRatio = canvas.width / canvas.height;
+        const a4AspectRatio = a4WidthPx / a4HeightPx;
+
+        let drawWidth, drawHeight;
+        if (canvasAspectRatio > a4AspectRatio) {
+            // キャンバスがA4より横長の場合、幅をA4に合わせ高さを調整
+            drawWidth = a4WidthPx;
+            drawHeight = a4WidthPx / canvasAspectRatio;
+        } else {
+            // キャンバスがA4より縦長または同じ比率の場合、高さをA4に合わせ幅を調整
+            drawHeight = a4HeightPx;
+            drawWidth = a4HeightPx * canvasAspectRatio;
         }
-      `;
-      document.head.appendChild(style);
 
-      const canvas = await html2canvas(element, {
-          scale: 2, // 高解像度でレンダリング
-          useCORS: true,
-          windowWidth: element.scrollWidth, // スクロール領域全体をキャプチャ
-          windowHeight: element.scrollHeight,
-      });
+        // 中央に配置
+        const offsetX = (a4WidthPx - drawWidth) / 2;
+        const offsetY = (a4HeightPx - drawHeight) / 2;
 
-      // CanvasをA4サイズにトリミングまたはスケーリング
-      const a4WidthPx = 210 / 25.4 * 96; // A4幅 (mm) をpxに変換 (96dpiの場合)
-      const a4HeightPx = 297 / 25.4 * 96; // A4高さ (mm) をpxに変換
+        ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
 
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = a4WidthPx;
-      outputCanvas.height = a4HeightPx;
-      const ctx = outputCanvas.getContext('2d');
+        // 画像をダウンロード
+        const imgData = outputCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-      // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
-      const aspectRatio = canvas.width / canvas.height;
-      let drawWidth = a4WidthPx;
-      let drawHeight = a4WidthPx / aspectRatio;
-
-      if (drawHeight > a4HeightPx) { // 高さオーバーフローの場合
-          drawHeight = a4HeightPx;
-          drawWidth = a4HeightPx * aspectRatio;
-      }
-
-      ctx.drawImage(canvas, (a4WidthPx - drawWidth) / 2, (a4HeightPx - drawHeight) / 2, drawWidth, drawHeight);
-
-      // 画像をダウンロード
-      const imgData = outputCanvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = imgData;
-      link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // 印刷用CSSを元に戻す
-      document.head.removeChild(style);
+        // 印刷用CSSを元に戻す
+        const styleToRemove = document.getElementById('print-style');
+        if (styleToRemove) {
+            document.head.removeChild(styleToRemove);
+        }
     });
 
     // 初期レンダリング
