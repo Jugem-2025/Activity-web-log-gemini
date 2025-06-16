@@ -75,7 +75,8 @@
     }
     #weeklyTable th, #weeklyTable td {
       border: 1px solid #eee; /* セルの境界線 */
-      padding: 8px;
+      /* ★修正: セルの垂直パディングを減らす */
+      padding: 4px 8px; /* 上下パディングを4pxに */
       text-align: left;
       vertical-align: top; /* 上揃え */
       font-size: 0.85em; /* 文字を小さめに */
@@ -87,7 +88,13 @@
     }
     #weeklyTable td {
       background: white;
-      line-height: 1.4; /* 行間を調整 */
+      /* ★修正: 行間を狭める */
+      line-height: 1.2; /* 行間を調整 */
+    }
+    #weeklyTable td p {
+        /* ★修正: 各行の上下マージンをなくす */
+        margin: 0;
+        padding: 0;
     }
     #weeklyTable tr:nth-child(even) td {
       background: #fdfdfe; /* 偶数行の背景色 */
@@ -95,12 +102,14 @@
     .daily-summary {
       font-size: 0.8em;
       color: #666;
-      margin-top: 5px;
-      padding-top: 5px;
+      /* ★修正: デイリーサマリーの上下マージンとパディングを調整 */
+      margin-top: 3px; /* 上マージンを減らす */
+      padding-top: 3px; /* 上パディングを減らす */
       border-top: 1px dashed #eee;
     }
     .daily-summary p {
         margin: 0;
+        padding: 0;
     }
 
     /* 印刷用スタイル (A4サイズ調整) */
@@ -131,7 +140,7 @@
         font-size: 0.7em; /* 印刷時にフォントサイズをさらに小さく */
       }
       #weeklyTable th, #weeklyTable td {
-        padding: 4px; /* 印刷時のパディングを調整 */
+        padding: 2px 4px; /* 印刷時のパディングをさらに調整 */
       }
     }
   </style>
@@ -232,7 +241,7 @@
           const entry = dailyData[timeKey];
 
           if (entry) {
-            // ★修正: やったこと (内容のみ表示)
+            // ★修正: やったこと (内容のみ表示、Pタグは維持)
             const activityP = document.createElement('p');
             activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
@@ -240,8 +249,8 @@
             // 気分と疲労度（「睡眠」の場合は非表示）
             if (!entry.activity.includes("睡眠")) {
               const moodFatigueP = document.createElement('p');
-              // ★修正: 気分→気, 疲労度→疲
-              moodFatigueP.innerHTML = `気: ${entry.mood === '' ? '―' : entry.mood}　疲: ${entry.fatigue === '' ? '―' : entry.fatigue}`;
+              // ★修正: 気分→気, 疲労度→疲 で1行にまとめる
+              moodFatigueP.textContent = `気: ${entry.mood === '' ? '―' : entry.mood} 疲: ${entry.fatigue === '' ? '―' : entry.fatigue}`;
               td.appendChild(moodFatigueP);
             } else {
                 const sleepP = document.createElement('p');
@@ -249,10 +258,10 @@
                 td.appendChild(sleepP);
             }
             
-            // 自由記入欄
+            // 自由記入欄 (項目名は維持)
             if (entry.free) {
                 const freeTxtP = document.createElement('p');
-                freeTxtP.innerHTML = `メモ: ${entry.free}`;
+                freeTxtP.textContent = `メモ: ${entry.free}`; // テキストコンテンツに統一
                 td.appendChild(freeTxtP);
             }
           } else {
@@ -264,6 +273,7 @@
           if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
             const summaryDiv = document.createElement('div');
             summaryDiv.className = 'daily-summary';
+            // 各項目はPタグで包み、改行させる
             if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
             if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
             if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
@@ -296,7 +306,7 @@
       // テーブルコンテナを画像化の対象にする
       const element = document.getElementById('weeklyTableContainer');
 
-      // 印刷用CSSを適用
+      // 印刷用CSSを適用 (既存のものを維持)
       const style = document.createElement('style');
       style.innerHTML = `
         @media print {
@@ -307,7 +317,7 @@
                 width: 100%; height: 100%; display: block; overflow: visible;
             }
             #weeklyTable { width: 100%; height: 100%; font-size: 0.7em; }
-            #weeklyTable th, #weeklyTable td { padding: 4px; }
+            #weeklyTable th, #weeklyTable td { padding: 2px 4px; } /* 印刷時もコンパクトに */
         }
       `;
       document.head.appendChild(style);
