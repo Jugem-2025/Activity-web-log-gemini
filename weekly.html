@@ -232,15 +232,16 @@
           const entry = dailyData[timeKey];
 
           if (entry) {
-            // やったこと
+            // ★修正: やったこと (内容のみ表示)
             const activityP = document.createElement('p');
-            activityP.innerHTML = `<strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}`;
+            activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
 
             // 気分と疲労度（「睡眠」の場合は非表示）
             if (!entry.activity.includes("睡眠")) {
               const moodFatigueP = document.createElement('p');
-              moodFatigueP.innerHTML = `<strong>気分:</strong> ${entry.mood === '' ? '―' : entry.mood}　<strong>疲労:</strong> ${entry.fatigue === '' ? '―' : entry.fatigue}`;
+              // ★修正: 気分→気, 疲労度→疲
+              moodFatigueP.innerHTML = `気: ${entry.mood === '' ? '―' : entry.mood}　疲: ${entry.fatigue === '' ? '―' : entry.fatigue}`;
               td.appendChild(moodFatigueP);
             } else {
                 const sleepP = document.createElement('p');
@@ -251,7 +252,7 @@
             // 自由記入欄
             if (entry.free) {
                 const freeTxtP = document.createElement('p');
-                freeTxtP.innerHTML = `<strong>メモ:</strong> ${entry.free}`;
+                freeTxtP.innerHTML = `メモ: ${entry.free}`;
                 td.appendChild(freeTxtP);
             }
           } else {
@@ -295,15 +296,6 @@
       // テーブルコンテナを画像化の対象にする
       const element = document.getElementById('weeklyTableContainer');
 
-      // html2canvasオプションでA4サイズに調整
-      // A4 (210mm x 297mm) をpxに変換 (dpi=96の場合)
-      const a4WidthPx = 210 / 25.4 * 96;
-      const a4HeightPx = 297 / 25.4 * 96;
-
-      // 現在の要素の幅と高さを取得
-      const originalWidth = element.offsetWidth;
-      const originalHeight = element.offsetHeight;
-
       // 印刷用CSSを適用
       const style = document.createElement('style');
       style.innerHTML = `
@@ -320,36 +312,28 @@
       `;
       document.head.appendChild(style);
 
-      // html2canvasでスクリーンショット
-      // scaleを調整して、画像が高解像度になるようにする。
-      // A4に収まるように、元の幅とA4幅を比較して適切なscaleを計算。
-      // 縦長のコンテンツの場合、heightを基準にscaleを決めることも検討が必要。
-      // ここでは、contentWidthがA4幅に収まるように調整
-      const scale = a4WidthPx / originalWidth;
-      const finalScale = scale > 1 ? 1 : scale; // 拡大しすぎないように最大1倍
-
       const canvas = await html2canvas(element, {
           scale: 2, // 高解像度でレンダリング
           useCORS: true,
-          // width: originalWidth, // 元の幅を使用
-          // height: originalHeight, // 元の高さを使用
           windowWidth: element.scrollWidth, // スクロール領域全体をキャプチャ
           windowHeight: element.scrollHeight,
       });
 
       // CanvasをA4サイズにトリミングまたはスケーリング
+      const a4WidthPx = 210 / 25.4 * 96; // A4幅 (mm) をpxに変換 (96dpiの場合)
+      const a4HeightPx = 297 / 25.4 * 96; // A4高さ (mm) をpxに変換
+
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = a4WidthPx;
       outputCanvas.height = a4HeightPx;
       const ctx = outputCanvas.getContext('2d');
 
       // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
-      // 縦横比を維持しつつ、A4サイズにフィットさせる
       const aspectRatio = canvas.width / canvas.height;
       let drawWidth = a4WidthPx;
       let drawHeight = a4WidthPx / aspectRatio;
 
-      if (drawHeight > a4HeightPx) {
+      if (drawHeight > a4HeightPx) { // 高さオーバーフローの場合
           drawHeight = a4HeightPx;
           drawWidth = a4HeightPx * aspectRatio;
       }
