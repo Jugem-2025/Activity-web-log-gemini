@@ -62,7 +62,6 @@
       border-bottom: 1px solid #ddd;
       cursor: pointer;
     }
-    /* ★修正: ヘッダー内の保存ボタンのスタイルを調整 */
     .hour-header .save-btn-header {
       background: #4a90e2;
       color: white;
@@ -136,21 +135,6 @@
       box-sizing: border-box; /* パディングを考慮したサイズ計算 */
       min-width: 80px; /* 最小幅を設定 */
     }
-    /* ★削除された要素のスタイルなので不要ですが、念のため残す場合はコメントアウト */
-    /* .save-btn {
-      background: #4a90e2;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1em;
-      transition: background 0.2s;
-      margin-top: 5px;
-    }
-    .save-btn:hover {
-      background: #3b78c5;
-    } */
     .daily-note {
       background: white;
       border: 1px solid #ddd;
@@ -228,14 +212,15 @@
      */
     function render() {
       const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      // ★修正: 既存の全データを読み込む
+      const allDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
       recordArea.innerHTML = '';
 
-      if (data.dailyNote) {
-        alcoholChk.checked = data.dailyNote.alcohol || false;
-        caffeineChk.checked = data.dailyNote.caffeine || false;
-        intakeMemo.value = data.dailyNote.intakeMemo || '';
-        dailyMemo.value = data.dailyNote.memo || '';
+      if (allDayData.dailyNote) {
+        alcoholChk.checked = allDayData.dailyNote.alcohol || false;
+        caffeineChk.checked = allDayData.dailyNote.caffeine || false;
+        intakeMemo.value = allDayData.dailyNote.intakeMemo || '';
+        dailyMemo.value = allDayData.dailyNote.memo || '';
       } else {
         alcoholChk.checked = false;
         caffeineChk.checked = false;
@@ -250,22 +235,28 @@
         const hour = (i + 4) % 24;
         const key = hour.toString().padStart(2,'0');
 
-        let entry = data[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+        // ★修正: allDayDataから該当時間帯のデータを取得。なければ初期値
+        let entry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
 
         if (i > 0) {
-            if (entry.mood === 50 && !entry.activity.includes("睡眠")) {
-                entry.mood = lastMood;
-            }
-            if (entry.fatigue === 50 && !entry.activity.includes("睡眠")) {
-                entry.fatigue = lastFatigue;
+            // "睡眠"タグがない場合のみ、直前の気分・疲労度を適用
+            if (!entry.activity.includes("睡眠")) {
+                if (entry.mood === 50) { // 初期値の50の場合のみ適用
+                    entry.mood = lastMood;
+                }
+                if (entry.fatigue === 50) { // 初期値の50の場合のみ適用
+                    entry.fatigue = lastFatigue;
+                }
             }
         }
+        // 現在のmood/fatigueを次の時間帯のためにlastMood/lastFatigueに設定
         if (entry.mood !== '') {
             lastMood = entry.mood;
         }
         if (entry.fatigue !== '') {
             lastFatigue = entry.fatigue;
         }
+
 
         // --- UI要素の生成 ---
         const block = document.createElement('div');
@@ -275,19 +266,14 @@
         header.className = 'hour-header';
         header.textContent = `${key}:00`;
 
-        // ★修正: 保存ボタンはヘッダー内にのみ生成
         const saveBtnHeader = document.createElement('button');
         saveBtnHeader.className = 'save-btn-header';
-        saveBtnHeader.textContent = '保存する'; // テキストを「保存する」に変更
+        saveBtnHeader.textContent = '保存する';
 
         const compact = document.createElement('div');
         compact.className = 'compact';
-        compact.innerHTML = `
-          <strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}<br>
-          <strong>気分:</strong> ${entry.mood === '' ? '―' : entry.mood}　<strong>疲労:</strong> ${entry.fatigue === '' ? '―' : entry.fatigue}<br>
-          <strong>メモ:</strong> ${entry.free || '―'}
-        `;
-
+        // compactの表示内容は、contentのデータと同期するため、後で更新する
+        
         const content = document.createElement('div');
         content.className = entry.folded ? 'hour-content hidden' : 'hour-content';
 
@@ -300,12 +286,13 @@
           chk.value = tag;
           chk.checked = entry.activity.includes(tag);
           
-          chk.addEventListener('click', e => e.stopPropagation());
+          chk.addEventListener('click', e => e.stopPropagation()); // 親要素のクリックイベントを停止
           
           chk.addEventListener('change', () => {
+            // ★重要: entryオブジェクトを直接更新する
             if (chk.checked) {
               if (tag === "睡眠") {
-                entry.activity = ["睡眠"];
+                entry.activity = ["睡眠"]; // 睡眠が選択されたら他を全て解除
                 selMood.value = '';
                 selMood.disabled = true;
                 selFat.value = '';
@@ -316,20 +303,25 @@
                   }
                 });
               } else {
-                entry.activity = entry.activity.filter(t => t !== "睡眠");
-                selMood.disabled = false;
-                selFat.disabled = false;
-                if (!entry.activity.includes(tag)) {
+                // 睡眠が選ばれていたら解除し、通常モードに戻す
+                if (entry.activity.includes("睡眠")) {
+                  entry.activity = [];
+                  selMood.disabled = false;
+                  selFat.disabled = false;
+                }
+                if (!entry.activity.includes(tag)) { // 既に含まれていない場合のみ追加
                   entry.activity.push(tag);
                 }
               }
-            } else {
+            } else { // チェックが外された場合
               entry.activity = entry.activity.filter(t => t !== tag);
               if (tag === "睡眠") {
                  selMood.disabled = false;
                  selFat.disabled = false;
               }
             }
+            // チェックボックスの変更時にもcompact表示を更新
+            updateCompactView(compact, entry);
           });
           lbl.appendChild(chk);
           lbl.appendChild(document.createTextNode(tag));
@@ -342,6 +334,7 @@
         freeTxt.value = entry.free;
         freeTxt.addEventListener('input', () => {
           entry.free = freeTxt.value;
+          updateCompactView(compact, entry); // 入力時にもcompact表示を更新
         });
 
         const row = document.createElement('div');
@@ -353,18 +346,26 @@
         moods.forEach(m => {
           const o = document.createElement('option');
           o.value = o.textContent = m;
-          if (m === entry.mood) o.selected = true;
+          // entry.mood が数字の場合のみ selected
+          if (entry.mood === m) o.selected = true;
           selMood.appendChild(o);
         });
+        // 睡眠タグがある場合は気分・疲労度を無効化
         if (entry.activity.includes("睡眠")) {
-            selMood.value = '';
+            selMood.value = ''; // 値を空に
             selMood.disabled = true;
         } else {
             selMood.disabled = false;
+            // 睡眠でない場合で、entry.moodがnullやundefinedの場合は、初期値（50）を選択させる
+            if (entry.mood === undefined || entry.mood === null || entry.mood === '') {
+                 selMood.value = 50; // デフォルト値に戻す
+                 entry.mood = 50;
+            }
         }
         selMood.addEventListener('change', () => {
-            entry.mood = parseInt(selMood.value);
+            entry.mood = selMood.value === '' ? '' : parseInt(selMood.value);
             lastMood = entry.mood;
+            updateCompactView(compact, entry); // 変更時にもcompact表示を更新
         });
 
         const fatigueLabel = document.createElement('label');
@@ -373,77 +374,101 @@
         moods.forEach(f => {
           const o = document.createElement('option');
           o.value = o.textContent = f;
-          if (f === entry.fatigue) o.selected = true;
+          if (entry.fatigue === f) o.selected = true;
           selFat.appendChild(o);
         });
         if (entry.activity.includes("睡眠")) {
-            selFat.value = '';
+            selFat.value = ''; // 値を空に
             selFat.disabled = true;
         } else {
             selFat.disabled = false;
+            if (entry.fatigue === undefined || entry.fatigue === null || entry.fatigue === '') {
+                 selFat.value = 50; // デフォルト値に戻す
+                 entry.fatigue = 50;
+            }
         }
         selFat.addEventListener('change', () => {
-            entry.fatigue = parseInt(selFat.value);
+            entry.fatigue = selFat.value === '' ? '' : parseInt(selFat.value);
             lastFatigue = entry.fatigue;
+            updateCompactView(compact, entry); // 変更時にもcompact表示を更新
         });
 
         row.append(moodLabel, selMood, fatigueLabel, selFat);
         
-        // ★修正: contentからは保存ボタンを削除
         content.append(ckGrid, freeTxt, row);
         
-        // ★修正: ヘッダーに保存ボタンを追加
         header.appendChild(saveBtnHeader);
         block.append(header, compact, content);
         recordArea.append(block);
+
+        // compactビューの初期表示を更新
+        updateCompactView(compact, entry);
+
 
         // --- イベントリスナーの設定 ---
 
         // ヘッダー（保存ボタンを含む全体）をクリックで保存と折りたたみ/展開
         header.onclick = (e) => {
             // 保存ボタン以外がクリックされた場合のみ折りたたみ/展開
-            // 保存ボタンがクリックされたら、保存処理だけを行う
             if (e.target !== saveBtnHeader) {
                 entry.folded = !entry.folded;
-                // ヘッダークリック時もデータを保存（折りたたみ状態の変更を保存）
+                // ★修正: 既存の全データを読み込み、当該時間帯のfolded状態を更新して保存
                 const currentDataOnHeaderClick = JSON.parse(localStorage.getItem(dateStr) || '{}');
-                currentDataOnHeaderClick[key] = entry; 
+                currentDataOnHeaderClick[key] = entry; // 該当時間帯のデータを更新
+                // dailyNoteも念のため最新の状態を反映
                 currentDataOnHeaderClick.dailyNote = currentDataOnHeaderClick.dailyNote || {}; 
                 currentDataOnHeaderClick.dailyNote.alcohol = alcoholChk.checked;
                 currentDataOnHeaderClick.dailyNote.caffeine = caffeineChk.checked;
                 currentDataOnHeaderClick.dailyNote.intakeMemo = intakeMemo.value;
                 currentDataOnHeaderClick.dailyNote.memo = dailyMemo.value;
+
                 localStorage.setItem(dateStr, JSON.stringify(currentDataOnHeaderClick)); 
-                render(); 
+                render(); // UIを再描画して折りたたみ状態を反映
             }
         };
         
         // ヘッダー内の保存ボタンのクリックイベント（保存と折りたたみ）
         saveBtnHeader.onclick = (e) => {
             e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
-            // 保存ボタンが押されたときに、現在のUI上の値をデータに反映
+            
+            // UI上の現在の値をentryオブジェクトに反映
             entry.mood = entry.activity.includes("睡眠") ? '' : (selMood.value === '' ? '' : parseInt(selMood.value));
             entry.fatigue = entry.activity.includes("睡眠") ? '' : (selFat.value === '' ? '' : parseInt(selFat.value));
             entry.free = freeTxt.value;
             entry.folded = true; // 保存時は常に折りたたむ
-            
-            const currentData = JSON.parse(localStorage.getItem(dateStr) || '{}');
-            currentData[key] = entry;
 
-            currentData.dailyNote = currentData.dailyNote || {};
-            currentData.dailyNote.alcohol = alcoholChk.checked;
-            currentData.dailyNote.caffeine = caffeineChk.checked;
-            currentData.dailyNote.intakeMemo = intakeMemo.value;
-            currentData.dailyNote.memo = dailyMemo.value;
-            localStorage.setItem(dateStr, JSON.stringify(currentData));
-            render();
+            // ★修正: 既存の全データを読み込み、該当時間帯のデータを更新して保存
+            const allDayDataToSave = JSON.parse(localStorage.getItem(dateStr) || '{}');
+            allDayDataToSave[key] = entry; // 該当時間帯のデータを更新
+
+            // dailyNoteも念のため最新の状態を反映
+            allDayDataToSave.dailyNote = allDayDataToSave.dailyNote || {};
+            allDayDataToSave.dailyNote.alcohol = alcoholChk.checked;
+            allDayDataToSave.dailyNote.caffeine = caffeineChk.checked;
+            allDayDataToSave.dailyNote.intakeMemo = intakeMemo.value;
+            allDayDataToSave.dailyNote.memo = dailyMemo.value;
+
+            localStorage.setItem(dateStr, JSON.stringify(allDayDataToSave));
+            render(); // UIを再描画して折りたたみ状態と最新データを反映
         };
 
         compact.style.display = entry.folded ? 'block' : 'none';
-        // ★修正: ヘッダー内の保存ボタンは常に表示されるようにする（折りたたみ時の非表示ロジック削除）
-        // header.lastChild.style.display = entry.folded ? 'none' : 'block'; 
       }
     }
+
+    /**
+     * コンパクト表示のHTMLを更新するヘルパー関数
+     * @param {HTMLElement} compactElement - compact表示のdiv要素
+     * @param {object} entry - 該当時間帯のデータオブジェクト
+     */
+    function updateCompactView(compactElement, entry) {
+        compactElement.innerHTML = `
+          <strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}<br>
+          <strong>気分:</strong> ${entry.activity.includes("睡眠") ? '睡眠中' : (entry.mood === '' ? '―' : entry.mood)}　<strong>疲労:</strong> ${entry.activity.includes("睡眠") ? '' : (entry.fatigue === '' ? '―' : entry.fatigue)}<br>
+          <strong>メモ:</strong> ${entry.free || '―'}
+        `;
+    }
+
 
     // --- アプリ初期化とグローバルイベントリスナー ---
 
@@ -451,37 +476,23 @@
     dp.value = new Date().toISOString().split('T')[0];
     dp.onchange = render;
 
-    alcoholChk.addEventListener('change', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.alcohol = alcoholChk.checked;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
+    // Daily Note関連の入力変更イベント
+    // これらのイベントも、既存の全データを読み込んでから更新するように統一
+    function saveDailyNoteChanges() {
+        const dateStr = document.getElementById('recordDate').value;
+        const allDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+        allDayData.dailyNote = allDayData.dailyNote || {};
+        allDayData.dailyNote.alcohol = alcoholChk.checked;
+        allDayData.dailyNote.caffeine = caffeineChk.checked;
+        allDayData.dailyNote.intakeMemo = intakeMemo.value;
+        allDayData.dailyNote.memo = dailyMemo.value;
+        localStorage.setItem(dateStr, JSON.stringify(allDayData));
+    }
 
-    caffeineChk.addEventListener('change', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.caffeine = caffeineChk.checked;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
-
-    intakeMemo.addEventListener('input', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.intakeMemo = intakeMemo.value;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
-
-    dailyMemo.addEventListener('input', () => {
-      const dateStr = document.getElementById('recordDate').value;
-      const data = JSON.parse(localStorage.getItem(dateStr) || '{}');
-      data.dailyNote = data.dailyNote || {};
-      data.dailyNote.memo = dailyMemo.value;
-      localStorage.setItem(dateStr, JSON.stringify(data));
-    });
+    alcoholChk.addEventListener('change', saveDailyNoteChanges);
+    caffeineChk.addEventListener('change', saveDailyNoteChanges);
+    intakeMemo.addEventListener('input', saveDailyNoteChanges);
+    dailyMemo.addEventListener('input', saveDailyNoteChanges);
 
     render();
   </script>
