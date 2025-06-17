@@ -93,9 +93,6 @@
         margin: 0;
         padding: 0;
     }
-    #weeklyTable tr:nth-child(even) td {
-      background: #fdfdfe; /* 偶数行の背景色 */
-    }
     .daily-summary {
       font-size: 0.8em;
       color: #666;
@@ -106,6 +103,12 @@
     .daily-summary p {
         margin: 0;
         padding: 0;
+    }
+    /* 睡眠中の表示をコンパクトにするためのスタイル */
+    .sleep-entry {
+        font-style: italic; /* 斜体 */
+        color: #888; /* 少し薄い色 */
+        /* 必要に応じて、paddingやline-heightをさらに調整してコンパクトに */
     }
 
     /* 印刷用スタイル (A4サイズ調整) */
@@ -237,21 +240,26 @@
           const entry = dailyData[timeKey];
 
           if (entry) {
+            // "睡眠"が含まれているかチェック
+            const isSleeping = entry.activity.includes("睡眠");
+
             // やったこと (内容のみ表示、Pタグは維持)
             const activityP = document.createElement('p');
             activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
 
-            // 気分と疲労度（「睡眠」の場合は非表示）
-            if (!entry.activity.includes("睡眠")) {
+            // 睡眠中の場合は気分と疲労度を表示せず、「睡眠中」と表示し、コンパクトなスタイルを適用
+            if (isSleeping) {
+              const sleepP = document.createElement('p');
+              sleepP.textContent = '睡眠中';
+              sleepP.classList.add('sleep-entry'); // 新しいクラスを追加
+              td.appendChild(sleepP);
+            } else {
+              // 気分と疲労度（「睡眠」ではない場合のみ表示）
               const moodFatigueP = document.createElement('p');
               // 気分→気, 疲労度→疲 で1行にまとめる
-              moodFatigueP.textContent = `気: ${entry.mood === '' ? '―' : entry.mood} 疲: ${entry.fatigue === '' ? '―' : entry.fatigue}`;
+              moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
               td.appendChild(moodFatigueP);
-            } else {
-                const sleepP = document.createElement('p');
-                sleepP.textContent = '睡眠中'; // 睡眠中は気分・疲労度を表示しない代わりにテキスト
-                td.appendChild(sleepP);
             }
             
             // 自由記入欄 (項目名は維持)
