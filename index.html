@@ -210,6 +210,9 @@
     // その日の全データを保持するオブジェクト (レンダリング時にLocalStorageから読み込み、変更を随時反映)
     let allDayData = {};
 
+    // 空の活動記録エントリのデフォルト値
+    const defaultEntry = { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+
     /**
      * ローカルストレージにその日のデータを保存する関数
      * @param {string} dateStr - 日付文字列 (YYYY-MM-DD)
@@ -234,6 +237,26 @@
         localStorage.setItem(dateStr, JSON.stringify(dataToSave));
     }
 
+    /**
+     * エントリがデフォルトの状態かどうかをチェックするヘルパー関数
+     * @param {object} entry - チェックするエントリデータ
+     * @returns {boolean} デフォルトの状態であればtrue
+     */
+    function isEntryDefault(entry) {
+        if (!entry) return true; // エントリ自体が存在しない場合はデフォルト
+
+        // activityが空か、"睡眠"のみで他の活動がない場合
+        const isActivityDefault = entry.activity.length === 0 || (entry.activity.length === 1 && entry.activity[0] === "睡眠" && entry.mood === '' && entry.fatigue === '');
+        
+        // moodとfatigueが初期値の50であるか、または"睡眠"の場合は空であるか
+        const isMoodFatigueDefault = (entry.mood === 50 && entry.fatigue === 50) || (entry.mood === '' && entry.fatigue === '' && entry.activity.includes("睡眠"));
+        
+        // freeが空であるか
+        const isFreeDefault = entry.free === '';
+
+        return isActivityDefault && isMoodFatigueDefault && isFreeDefault;
+    }
+
 
     /**
      * アプリのUIをレンダリング（描画）する関数
@@ -256,18 +279,11 @@
       lastMood = 50;
       lastFatigue = 50;
 
-      // 日付変更時にも直前の気分・疲労度をリセットするため、ループの前に一度処理
-      // (新しい日付の04:00のブロックは、前日の27:00のデータがないためデフォルト値になる)
-      
-      // ループの前に、前日の最後の時間の気分・疲労度を取得するロジックは今回複雑になるため、
-      // 簡単のために日が変わったらリセットされる挙動とします。
-      // もし前日からの引き継ぎが必要な場合は、別途ロジックの追加が必要です。
-
       for (let i = 0; i < 24; i++) {
         const hour = (i + 4) % 24; // 04:00からスタート
         const key = hour.toString().padStart(2,'0');
 
-        let entry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+        let entry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry)); // デフォルトエントリのディープコピー
 
         // 「睡眠」が選択されている場合は、気分・疲労度を空にする
         if (entry.activity.includes("睡眠")) {
@@ -329,7 +345,7 @@
           
           // チェックボックスの変更時
           chk.addEventListener('change', () => {
-            let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
             
             if (chk.checked) {
               if (tag === "睡眠") {
@@ -391,7 +407,7 @@
         freeTxt.value = entry.free;
         // 自由記入欄の入力時
         freeTxt.addEventListener('input', () => {
-          let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+          let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
           currentEntry.free = freeTxt.value;
           allDayData[key] = currentEntry; // allDayDataを更新
           saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
@@ -425,7 +441,7 @@
         }
         // 気分選択の変更時
         selMood.addEventListener('change', () => {
-            let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
             currentEntry.mood = selMood.value === '' ? '' : parseInt(selMood.value);
             // lastMoodを更新 (次以降のブロックの初期値に影響)
             if (currentEntry.mood !== '') {
@@ -460,7 +476,7 @@
         }
         // 疲労度選択の変更時
         selFat.addEventListener('change', () => {
-            let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
             currentEntry.fatigue = selFat.value === '' ? '' : parseInt(selFat.value);
             // lastFatigueを更新 (次以降のブロックの初期値に影響)
             if (currentEntry.fatigue !== '') {
@@ -489,7 +505,7 @@
         header.onclick = (e) => {
             // 保存ボタン以外がクリックされた場合のみ折りたたみ/展開
             if (e.target !== saveBtnHeader) {
-                let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
+                let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
                 currentEntry.folded = !currentEntry.folded;
                 allDayData[key] = currentEntry; // allDayDataを更新
                 saveToLocalStorage(dateStr, key, currentEntry); // 折りたたみ状態を保存
@@ -497,32 +513,29 @@
             }
         };
         
-        // ヘッダー内の保存ボタンのクリックイベント（強制保存と折りたたみ）
+        // ヘッダー内の保存ボタンのクリックイベント（複数時間帯の折りたたみ）
         saveBtnHeader.onclick = (e) => {
             e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
             
-            // UI上の現在の値をentryオブジェクトに反映
-            // (即時保存されているはずだが、念のためこの時点でUIから最新の値を再取得し、allDayDataを更新)
-            let currentEntry = allDayData[key] || { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
-            
-            // チェックボックスの状態を再取得
-            const activityTags = Array.from(ckGrid.querySelectorAll('input[type="checkbox"]:checked'))
-                                     .map(checkbox => checkbox.value);
-            currentEntry.activity = activityTags;
+            const dateStr = dp.value;
+            const currentDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
 
-            // 睡眠が選択されている場合、気分・疲労度を空にする
-            if (currentEntry.activity.includes("睡眠")) {
-                currentEntry.mood = '';
-                currentEntry.fatigue = '';
-            } else {
-                currentEntry.mood = selMood.value === '' ? '' : parseInt(selMood.value);
-                currentEntry.fatigue = selFat.value === '' ? '' : parseInt(selFat.value);
+            // 全ての時間帯をループし、入力があるものだけ折りたたむ
+            for (let j = 0; j < 24; j++) {
+                const hourKey = (j + 4) % 24;
+                const timeKey = hourKey.toString().padStart(2, '0');
+                
+                let entryToUpdate = currentDayData[timeKey] || JSON.parse(JSON.stringify(defaultEntry));
+
+                // entryToUpdateが初期値と異なる場合は折りたたむ
+                if (!isEntryDefault(entryToUpdate)) {
+                    entryToUpdate.folded = true;
+                    currentDayData[timeKey] = entryToUpdate;
+                }
             }
-            currentEntry.free = freeTxt.value;
-            currentEntry.folded = true; // 保存時は常に折りたたむ
-
-            allDayData[key] = currentEntry; // allDayDataを更新
-            saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
+            // allDayDataも更新
+            allDayData = currentDayData;
+            saveToLocalStorage(dateStr, null, null, allDayData.dailyNote); // 更新されたallDayDataをまとめて保存
             render(); // UIを再描画して折りたたみ状態と最新データを反映
         };
 
