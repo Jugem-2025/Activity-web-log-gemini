@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>週間表示</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <title>活動記録</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      max-width: 1000px; /* 週間表示なので少し広めに */
+      max-width: 800px;
       margin: auto;
       background: #f5f6fa;
       color: #333;
-      padding: 15px;
-      box-sizing: border-box;
+      padding: 15px; /* 全体のパディングを追加 */
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
     }
     header {
       display: flex;
@@ -23,7 +22,7 @@
       color: white;
       padding: 12px 16px;
       border-radius: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 20px; /* 下部に余白を追加 */
     }
     header h1 {
       font-size: 1.4em;
@@ -34,348 +33,558 @@
       color: white;
       font-size: 1.4em;
       text-decoration: none;
-      padding: 5px;
+      padding: 5px; /* クリックしやすいようにパディング */
     }
-    .week-navigation {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
+    .date-picker {
+      display: block;
+      margin: 16px 0;
+      font-size: 1em;
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
     }
-    .week-navigation button {
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: background 0.2s;
-    }
-    .week-navigation button:hover {
-      background: #5a6268;
-    }
-    #weekDisplay {
-      font-weight: bold;
-    }
-
-    /* 週表示テーブルのスタイル */
-    #weeklyTableContainer {
-      overflow-x: auto; /* 横スクロールを可能にする */
+    .hour-block {
       background: white;
       border: 1px solid #ddd;
       border-radius: 6px;
+      margin-bottom: 12px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      padding: 10px; /* テーブル内外に余白 */
+      overflow: hidden; /* 子要素のmarginがはみ出さないように */
     }
-    #weeklyTable {
-      width: 100%; /* コンテナいっぱいに広がる */
-      border-collapse: collapse; /* セルの境界線を結合 */
-      min-width: 700px; /* スマホで横スクロールさせるための最小幅 */
+    .hour-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #f0f4f8;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
     }
-    #weeklyTable th, #weeklyTable td {
-      border: 1px solid #eee; /* セルの境界線 */
-      padding: 4px 8px; /* 上下パディングを4pxに */
-      text-align: left;
-      vertical-align: top; /* 上揃え */
-      font-size: 0.85em; /* 文字を小さめに */
+    .hour-header .save-btn-header {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 6px 12px; /* 少し小さめに */
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em; /* フォントサイズも調整 */
+      transition: background 0.2s;
+      margin-left: auto; /* 右端に寄せる */
+      flex-shrink: 0; /* 縮まないように */
     }
-    #weeklyTable th {
-      background: #f8f9fa;
-      font-weight: bold;
-      white-space: nowrap; /* 日付が改行されないように */
-    }
-    #weeklyTable td {
-      background: white;
-      line-height: 1.2; /* 行間を調整 */
-    }
-    #weeklyTable td p {
-        margin: 0;
-        padding: 0;
-    }
-    .daily-summary {
-      font-size: 0.8em;
-      color: #666;
-      margin-top: 3px; /* 上マージンを減らす */
-      padding-top: 3px; /* 上パディングを減らす */
-      border-top: 1px dashed #eee;
-    }
-    .daily-summary p {
-        margin: 0;
-        padding: 0;
+    .hour-header .save-btn-header:hover {
+      background: #3b78c5;
     }
 
-    /* 印刷用スタイル (A4サイズ調整) */
-    @media print {
-      body {
-        margin: 0;
-        padding: 0;
-        max-width: none;
-        width: 210mm; /* A4幅 */
-        height: 297mm; /* A4高さ */
-        overflow: hidden; /* 余分なスクロールバー非表示 */
-      }
-      header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
-        display: none;
-      }
-      #weeklyTableContainer {
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        display: block; /* table-containerをブロック要素に */
-        overflow: visible; /* 印刷時はスクロール不要 */
-      }
-      #weeklyTable {
-        width: 100%;
-        height: 100%;
-        font-size: 0.7em; /* 印刷時にフォントサイズをさらに小さく */
-      }
-      #weeklyTable th, #weeklyTable td {
-        padding: 2px 4px; /* 印刷時のパディングをさらに調整 */
-      }
+    .compact {
+      display: none;
+      padding: 10px 12px;
+      font-size: 0.95em;
+      color: #555;
+      line-height: 1.5; /* 行の高さを調整 */
+    }
+    .hour-content {
+      padding: 10px 12px;
+    }
+    .hour-content.hidden {
+      display: none;
+    }
+    .checkbox-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .checkbox-grid label {
+      background: #e8f0fe;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.95em;
+      display: flex;
+      align-items: center;
+      transition: background 0.2s; /* ホバー効果 */
+    }
+    .checkbox-grid label:hover {
+        background: #d0e0fb;
+    }
+    .checkbox-grid input[type="checkbox"] {
+      margin-right: 4px;
+      cursor: pointer;
+    }
+    .flex-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap; /* スマホでの折り返し対応 */
+    }
+    .flex-row label {
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .flex-row select,
+    .flex-row input[type="text"] {
+      flex-grow: 1; /* スペースいっぱいに広がる */
+      padding: 6px;
+      font-size: 0.95em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
+      min-width: 80px; /* 最小幅を設定 */
+    }
+    .daily-note {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 20px; /* 上部に余白を追加 */
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .daily-note label {
+      display: flex; /* チェックボックスとテキストを揃える */
+      align-items: center;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    .daily-note input[type="checkbox"] {
+      margin-right: 6px;
+      cursor: pointer;
+    }
+    .daily-note textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+      box-sizing: border-box; /* パディングを考慮したサイズ計算 */
+      margin-top: 6px; /* 上部に余白を追加 */
+      font-size: 0.95em;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>週間表示</h1>
+    <h1>活動記録</h1>
     <div class="top-icons">
-      <a href="index.html" title="活動記録">✏️</a>
-      <a href="#" id="saveImageBtn" title="画像を保存">📷</a>
+      <a href="weekly.html" title="週間表示">📅</a>
+      <a href="tags.html" title="タグ編集">⚙️</a>
     </div>
   </header>
 
-  <div class="week-navigation">
-    <button id="prevWeekBtn">← 前の週</button>
-    <span id="weekDisplay"></span>
-    <button id="nextWeekBtn">次の週 →</button>
-  </div>
+  <input type="date" id="recordDate" class="date-picker">
+  <div id="recordArea"></div>
 
-  <div id="weeklyTableContainer">
-    <table id="weeklyTable">
-      <thead>
-        <tr id="dateRow">
-          <th>時間</th>
-        </tr>
-      </thead>
-      <tbody id="weeklyTableBody">
-        </tbody>
-    </table>
+  <div class="daily-note">
+    <label><input type="checkbox" id="alcohol"> アルコール</label>
+    <label><input type="checkbox" id="caffeine"> カフェイン</label>
+    <label>上記摂取状況：</label>
+    <textarea id="intakeMemo" rows="2" placeholder="アルコールやカフェインの含まれる飲料と量を具体的に記入"></textarea>
+    <label>メモ・備考：</label>
+    <textarea id="dailyMemo" rows="3" placeholder="自由記入"></textarea>
   </div>
 
   <script>
-    const daysOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
-    const weeklyTableBody = document.getElementById('weeklyTableBody');
-    const dateRow = document.getElementById('dateRow');
-    const weekDisplay = document.getElementById('weekDisplay');
-    const prevWeekBtn = document.getElementById('prevWeekBtn');
-    const nextWeekBtn = document.getElementById('nextWeekBtn');
-    const saveImageBtn = document.getElementById('saveImageBtn');
+    // デフォルトタグの定義 (localStorageになければこれを使う)
+    const defaultTags = ["起床","シャワー・風呂","朝食","昼食","夕食","外出","移動","個人課題","講義","帰宅","家事","休憩","就寝","薬","睡眠"];
+    // localStorageからタグを読み込む。なければデフォルトタグを使用
+    const tags = JSON.parse(localStorage.getItem("tags")) || defaultTags;
+    // 気分・疲労度の選択肢 (0から100まで5刻み)
+    const moods = Array.from({ length: 21 }, (_, i) => i * 5);
 
-    let currentMonday = getMonday(new Date()); // 現在表示している週の月曜日
+    // DOM要素の取得
+    const recordArea = document.getElementById('recordArea');
+    const alcoholChk = document.getElementById('alcohol');
+    const caffeineChk = document.getElementById('caffeine');
+    const intakeMemo = document.getElementById('intakeMemo');
+    const dailyMemo = document.getElementById('dailyMemo');
+    const dp = document.getElementById('recordDate');
 
-    // 指定された日付の週の月曜日を取得する関数
-    function getMonday(date) {
-      const d = new Date(date);
-      const day = d.getDay(); // 0 = 日曜, 1 = 月曜, ...
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 月曜日に調整 (日曜日の場合は前の月曜へ)
-      d.setDate(diff);
-      d.setHours(0, 0, 0, 0); // 時間をリセット
-      return d;
-    }
+    // 気分と疲労度の自動入力のために直前の値を保持する変数
+    let lastMood = 50;
+    let lastFatigue = 50;
+    
+    // その日の全データを保持するオブジェクト (レンダリング時にLocalStorageから読み込み、変更を随時反映)
+    let allDayData = {};
 
-    // 日付を "MM/DD(曜日)" 形式でフォーマット
-    function formatDate(date) {
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
-      const dayOfWeek = daysOfWeek[date.getDay()];
-      return `${month}/${day}(${dayOfWeek})`;
-    }
+    // 空の活動記録エントリのデフォルト値
+    const defaultEntry = { activity: [], mood: 50, fatigue: 50, free:'', folded:false };
 
-    // 週の表示範囲を更新する関数
-    function updateWeekDisplay() {
-      const sunday = new Date(currentMonday);
-      sunday.setDate(currentMonday.getDate() + 6);
-      weekDisplay.textContent = `${formatDate(currentMonday)} - ${formatDate(sunday)}`;
-    }
+    /**
+     * ローカルストレージにその日のデータを保存する関数
+     * @param {string} dateStr - 日付文字列 (YYYY-MM-DD)
+     * @param {string} timeKey - 時間帯キー (HH)。nullの場合はdailyNoteのみ更新
+     * @param {object} entryData - その時間帯のデータオブジェクト。nullの場合はdailyNoteのみ更新
+     * @param {object} dailyNoteData - その日のデイリーノートデータ。nullの場合は特定の時間帯データのみ更新
+     */
+    function saveToLocalStorage(dateStr, timeKey = null, entryData = null, dailyNoteData = null) {
+        // 現在メモリ上にあるallDayDataを使用
+        let dataToSave = JSON.parse(JSON.stringify(allDayData)); // ディープコピーして変更が元のallDayDataに影響しないように
 
-    // 週表示テーブルをレンダリングする関数
-    function renderWeeklyTable() {
-      dateRow.innerHTML = '<th>時間</th>'; // 時間列のヘッダーを初期化
-      weeklyTableBody.innerHTML = ''; // テーブルボディをクリア
+        if (timeKey !== null && entryData !== null) {
+            // 特定の時間帯のデータを更新
+            dataToSave[timeKey] = entryData;
+        }
 
-      const datesInWeek = [];
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(currentMonday);
-        date.setDate(currentMonday.getDate() + i);
-        datesInWeek.push(date);
-
-        const th = document.createElement('th');
-        th.textContent = formatDate(date);
-        dateRow.appendChild(th);
-      }
-
-      // 4時スタートで24時間分の行を生成
-      for (let i = 0; i < 24; i++) {
-        const hour = (i + 4) % 24;
-        const timeKey = hour.toString().padStart(2, '0');
+        if (dailyNoteData !== null) {
+            // デイリーノートのデータを更新
+            dataToSave.dailyNote = dailyNoteData;
+        }
         
-        const tr = document.createElement('tr');
-        const timeCell = document.createElement('td');
-        timeCell.textContent = `${timeKey}:00`;
-        tr.appendChild(timeCell);
-
-        datesInWeek.forEach(date => {
-          const td = document.createElement('td');
-          const dateStr = date.toISOString().split('T')[0];
-          const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
-          const entry = dailyData[timeKey];
-
-          if (entry) {
-            // "睡眠"が含まれているかチェック
-            const isSleeping = entry.activity.includes("睡眠");
-
-            // やったこと (内容のみ表示、Pタグは維持)
-            const activityP = document.createElement('p');
-            // 睡眠中の場合は「睡眠」というテキスト自体も表示しない
-            activityP.textContent = isSleeping ? '' : (entry.activity.join(', ') || '―');
-            td.appendChild(activityP);
-
-            // 睡眠中ではない場合のみ、気分と疲労度を表示
-            if (!isSleeping) {
-              const moodFatigueP = document.createElement('p');
-              // 気分→気, 疲労度→疲 で1行にまとめる
-              moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
-              td.appendChild(moodFatigueP);
-            }
-            
-            // 自由記入欄 (項目名は維持)
-            if (entry.free) {
-                const freeTxtP = document.createElement('p');
-                freeTxtP.textContent = `メモ: ${entry.free}`; // テキストコンテンツに統一
-                td.appendChild(freeTxtP);
-            }
-          } else {
-            td.textContent = '―'; // データがない場合
-          }
-
-          // DailyNoteのサマリーをセルの下部に追加
-          const dailyNote = dailyData.dailyNote;
-          if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
-            const summaryDiv = document.createElement('div');
-            summaryDiv.className = 'daily-summary';
-            // 各項目はPタグで包み、改行させる
-            if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
-            if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
-            if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
-            if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
-            td.appendChild(summaryDiv);
-          }
-
-          tr.appendChild(td);
-        });
-        weeklyTableBody.appendChild(tr);
-      }
-      updateWeekDisplay();
+        localStorage.setItem(dateStr, JSON.stringify(dataToSave));
     }
 
-    // イベントリスナー
-    prevWeekBtn.addEventListener('click', () => {
-      currentMonday.setDate(currentMonday.getDate() - 7);
-      renderWeeklyTable();
-    });
+    /**
+     * エントリがデフォルトの状態かどうかをチェックするヘルパー関数
+     * @param {object} entry - チェックするエントリデータ
+     * @returns {boolean} デフォルトの状態であればtrue
+     */
+    function isEntryDefault(entry) {
+        if (!entry) return true; // エントリ自体が存在しない場合はデフォルト
 
-    nextWeekBtn.addEventListener('click', () => {
-      currentMonday.setDate(currentMonday.getDate() + 7);
-      renderWeeklyTable();
-    });
+        // activityが空か、"睡眠"のみで他の活動がない場合
+        const isActivityDefault = entry.activity.length === 0 || (entry.activity.length === 1 && entry.activity[0] === "睡眠" && entry.mood === '' && entry.fatigue === '');
+        
+        // moodとfatigueが初期値の50であるか、または"睡眠"の場合は空であるか
+        const isMoodFatigueDefault = (entry.mood === 50 && entry.fatigue === 50) || (entry.mood === '' && entry.fatigue === '' && entry.activity.includes("睡眠"));
+        
+        // freeが空であるか
+        const isFreeDefault = entry.free === '';
 
-    // 画像保存ボタンのイベントリスナー
-    saveImageBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); // デフォルトのリンク動作を防止
+        return isActivityDefault && isMoodFatigueDefault && isFreeDefault;
+    }
 
-        const element = document.getElementById('weeklyTableContainer');
 
-        // 印刷用CSSを適用するためのスタイル要素を作成
-        const printStyle = document.createElement('style');
-        printStyle.id = 'print-style'; // 後で削除するためにIDを設定
-        printStyle.innerHTML = `
-            body { margin: 0; padding: 0; max-width: none; width: 210mm; height: 297mm; overflow: hidden; }
-            header, .week-navigation, .top-icons { display: none !important; } /* !importantで優先 */
-            #weeklyTableContainer {
-                border: none; box-shadow: none; padding: 0;
-                width: 100%; height: 100%; display: block; overflow: visible;
+    /**
+     * アプリのUIをレンダリング（描画）する関数
+     * 選択されている日付に基づいて、LocalStorageからデータを読み込み、表示を更新する
+     */
+    function render() {
+      const dateStr = dp.value;
+      // レンダリング開始時にその日の全データを読み込み、allDayData変数に保持
+      allDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+      recordArea.innerHTML = '';
+
+      // Daily Noteの値をUIに反映
+      const currentDailyNote = allDayData.dailyNote || {};
+      alcoholChk.checked = currentDailyNote.alcohol || false;
+      caffeineChk.checked = currentDailyNote.caffeine || false;
+      intakeMemo.value = currentDailyNote.intakeMemo || '';
+      dailyMemo.value = currentDailyNote.memo || '';
+
+      // lastMoodとlastFatigueは、その日のデータに基づいて初期化
+      lastMood = 50;
+      lastFatigue = 50;
+
+      for (let i = 0; i < 24; i++) {
+        const hour = (i + 4) % 24; // 04:00からスタート
+        const key = hour.toString().padStart(2,'0');
+
+        let entry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry)); // デフォルトエントリのディープコピー
+
+        // 「睡眠」が選択されている場合は、気分・疲労度を空にする
+        if (entry.activity.includes("睡眠")) {
+            entry.mood = '';
+            entry.fatigue = '';
+        } else {
+            // 「睡眠」以外の場合、mood/fatigueが未設定（初期値の50以外）であれば直前の値を適用
+            // ただし、明示的に設定されている場合はその値を優先
+            if (entry.mood === 50 && i > 0) { // 初期値50のままで、かつ最初のブロックでなければ
+                entry.mood = lastMood;
             }
-            #weeklyTable { width: 100%; height: 100%; font-size: 0.7em; }
-            #weeklyTable th, #weeklyTable td { padding: 2px 4px; }
-        `;
-        document.head.appendChild(printStyle);
+            if (entry.fatigue === 50 && i > 0) { // 初期値50のままで、かつ最初のブロックでなければ
+                entry.fatigue = lastFatigue;
+            }
+        }
+        
+        // 現在のmood/fatigueを次の時間帯のためにlastMood/lastFatigueに設定
+        // 「睡眠」ではない場合のみ更新する
+        if (!entry.activity.includes("睡眠")) {
+            // moodが空でなければ（空は「睡眠中」または未設定を意味する）
+            if (entry.mood !== '') {
+                lastMood = entry.mood;
+            }
+            if (entry.fatigue !== '') {
+                lastFatigue = entry.fatigue;
+            }
+        }
 
-        // html2canvasで要素を画像化
-        const canvas = await html2canvas(element, {
-            scale: 2, // 高解像度でレンダリング
-            useCORS: true,
-            // 描画する要素の現在のスクロール幅と高さをそのまま使用
-            windowWidth: element.scrollWidth, 
-            windowHeight: element.scrollHeight,
-            // x, y, width, height オプションで要素の全体をキャプチャ
-            x: element.scrollLeft,
-            y: element.scrollTop,
-            width: element.scrollWidth,
-            height: element.scrollHeight,
+
+        // --- UI要素の生成 ---
+        const block = document.createElement('div');
+        block.className = 'hour-block';
+
+        const header = document.createElement('div');
+        header.className = 'hour-header';
+        header.textContent = `${key}:00`;
+
+        const saveBtnHeader = document.createElement('button');
+        saveBtnHeader.className = 'save-btn-header';
+        saveBtnHeader.textContent = '保存する';
+        saveBtnHeader.dataset.timeKey = key; // 保存ボタンに時間帯キーを持たせる
+
+        const compact = document.createElement('div');
+        compact.className = 'compact';
+        
+        const content = document.createElement('div');
+        content.className = entry.folded ? 'hour-content hidden' : 'hour-content';
+
+        const ckGrid = document.createElement('div');
+        ckGrid.className = 'checkbox-grid';
+        tags.forEach(tag => {
+          const lbl = document.createElement('label');
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.value = tag;
+          chk.checked = entry.activity.includes(tag);
+          
+          chk.addEventListener('click', e => e.stopPropagation()); // 親要素のクリックイベントを停止
+          
+          // チェックボックスの変更時
+          chk.addEventListener('change', () => {
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
+            
+            if (chk.checked) {
+              if (tag === "睡眠") {
+                currentEntry.activity = ["睡眠"]; // 睡眠が選択されたら他を全て解除
+                // UI上の気分・疲労度セレクタを更新（DOM要素直接操作）
+                selMood.value = '';
+                selMood.disabled = true;
+                selFat.value = '';
+                selFat.disabled = true;
+                currentEntry.mood = ''; // データも空に
+                currentEntry.fatigue = ''; // データも空に
+                ckGrid.querySelectorAll('input[type="checkbox"]').forEach(otherChk => {
+                  if (otherChk !== chk) {
+                    otherChk.checked = false; // 他のチェックボックスのUIを更新
+                  }
+                });
+              } else {
+                // 睡眠が選ばれていたら解除し、通常モードに戻す
+                if (currentEntry.activity.includes("睡眠")) {
+                  currentEntry.activity = [];
+                  // UI上の気分・疲労度セレクタを有効化
+                  selMood.disabled = false;
+                  selFat.disabled = false;
+                  // デフォルト値をセット
+                  currentEntry.mood = 50; 
+                  currentEntry.fatigue = 50;
+                  selMood.value = 50;
+                  selFat.value = 50;
+                }
+                if (!currentEntry.activity.includes(tag)) {
+                  currentEntry.activity.push(tag);
+                }
+              }
+            } else { // チェックが外された場合
+              currentEntry.activity = currentEntry.activity.filter(t => t !== tag);
+              if (tag === "睡眠") {
+                 selMood.disabled = false;
+                 selFat.disabled = false;
+                 // 睡眠解除時もデフォルト値をセット
+                 currentEntry.mood = 50; 
+                 currentEntry.fatigue = 50;
+                 selMood.value = 50;
+                 selFat.value = 50;
+              }
+            }
+            // allDayDataを更新してから保存
+            allDayData[key] = currentEntry;
+            saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
+            updateCompactView(compact, currentEntry); // compact表示を更新
+          });
+          lbl.appendChild(chk);
+          lbl.appendChild(document.createTextNode(tag));
+          ckGrid.appendChild(lbl);
         });
 
-        // CanvasをA4サイズにトリミングまたはスケーリング
-        const a4WidthPx = 210 / 25.4 * 96; // A4幅 (mm) をpxに変換 (96dpiの場合)
-        const a4HeightPx = 297 / 25.4 * 96; // A4高さ (mm) をpxに変換
+        const freeTxt = document.createElement('input');
+        freeTxt.type = 'text';
+        freeTxt.placeholder = '自由記入';
+        freeTxt.value = entry.free;
+        // 自由記入欄の入力時
+        freeTxt.addEventListener('input', () => {
+          let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
+          currentEntry.free = freeTxt.value;
+          allDayData[key] = currentEntry; // allDayDataを更新
+          saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
+          updateCompactView(compact, currentEntry); // 入力時にもcompact表示を更新
+        });
 
-        const outputCanvas = document.createElement('canvas');
-        outputCanvas.width = a4WidthPx;
-        outputCanvas.height = a4HeightPx;
-        const ctx = outputCanvas.getContext('2d');
+        const row = document.createElement('div');
+        row.className = 'flex-row';
 
-        // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
-        // アスペクト比を保ちつつ、A4サイズにフィットさせる
-        const canvasAspectRatio = canvas.width / canvas.height;
-        const a4AspectRatio = a4WidthPx / a4HeightPx;
-
-        let drawWidth, drawHeight;
-        if (canvasAspectRatio > a4AspectRatio) {
-            // キャンバスがA4より横長の場合、幅をA4に合わせ高さを調整
-            drawWidth = a4WidthPx;
-            drawHeight = a4WidthPx / canvasAspectRatio;
+        const moodLabel = document.createElement('label');
+        moodLabel.textContent = "気分:";
+        const selMood = document.createElement('select');
+        moods.forEach(m => {
+          const o = document.createElement('option');
+          o.value = o.textContent = m;
+          // 初期表示時の選択
+          if (entry.mood === m) o.selected = true;
+          selMood.appendChild(o);
+        });
+        // 睡眠中の場合のdisabled/value設定
+        if (entry.activity.includes("睡眠")) {
+            selMood.value = '';
+            selMood.disabled = true;
         } else {
-            // キャンバスがA4より縦長または同じ比率の場合、高さをA4に合わせ幅を調整
-            drawHeight = a4HeightPx;
-            drawWidth = a4HeightPx * canvasAspectRatio;
+            selMood.disabled = false;
+            // moodがデータになければ50を初期値とする
+            if (entry.mood === undefined || entry.mood === null || entry.mood === '') {
+                 selMood.value = 50;
+                 entry.mood = 50; // データも50にする
+            }
         }
+        // 気分選択の変更時
+        selMood.addEventListener('change', () => {
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
+            currentEntry.mood = selMood.value === '' ? '' : parseInt(selMood.value);
+            // lastMoodを更新 (次以降のブロックの初期値に影響)
+            if (currentEntry.mood !== '') {
+                lastMood = currentEntry.mood;
+            }
+            allDayData[key] = currentEntry; // allDayDataを更新
+            saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
+            updateCompactView(compact, currentEntry); // 変更時にもcompact表示を更新
+        });
 
-        // 中央に配置
-        const offsetX = (a4WidthPx - drawWidth) / 2;
-        const offsetY = (a4HeightPx - drawHeight) / 2;
-
-        ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
-
-        // 画像をダウンロード
-        const imgData = outputCanvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = imgData;
-        link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // 印刷用CSSを元に戻す
-        const styleToRemove = document.getElementById('print-style');
-        if (styleToRemove) {
-            document.head.removeChild(styleToRemove);
+        const fatigueLabel = document.createElement('label');
+        fatigueLabel.textContent = "疲労度:";
+        const selFat = document.createElement('select');
+        moods.forEach(f => {
+          const o = document.createElement('option');
+          o.value = o.textContent = f;
+          // 初期表示時の選択
+          if (entry.fatigue === f) o.selected = true;
+          selFat.appendChild(o);
+        });
+        // 睡眠中の場合のdisabled/value設定
+        if (entry.activity.includes("睡眠")) {
+            selFat.value = '';
+            selFat.disabled = true;
+        } else {
+            selFat.disabled = false;
+            // fatigueがデータになければ50を初期値とする
+            if (entry.fatigue === undefined || entry.fatigue === null || entry.fatigue === '') {
+                 selFat.value = 50;
+                 entry.fatigue = 50; // データも50にする
+            }
         }
-    });
+        // 疲労度選択の変更時
+        selFat.addEventListener('change', () => {
+            let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
+            currentEntry.fatigue = selFat.value === '' ? '' : parseInt(selFat.value);
+            // lastFatigueを更新 (次以降のブロックの初期値に影響)
+            if (currentEntry.fatigue !== '') {
+                lastFatigue = currentEntry.fatigue;
+            }
+            allDayData[key] = currentEntry; // allDayDataを更新
+            saveToLocalStorage(dateStr, key, currentEntry); // その時間帯のデータを保存
+            updateCompactView(compact, currentEntry); // 変更時にもcompact表示を更新
+        });
 
-    // 初期レンダリング
-    renderWeeklyTable();
+        row.append(moodLabel, selMood, fatigueLabel, selFat);
+        
+        content.append(ckGrid, freeTxt, row);
+        
+        header.appendChild(saveBtnHeader);
+        block.append(header, compact, content);
+        recordArea.append(block);
+
+        // compactビューの初期表示を更新
+        updateCompactView(compact, entry);
+
+
+        // --- イベントリスナーの設定 ---
+
+        // ヘッダー（保存ボタンを含む全体）をクリックで折りたたみ/展開
+        header.onclick = (e) => {
+            // 保存ボタン以外がクリックされた場合のみ折りたたみ/展開
+            if (e.target !== saveBtnHeader) {
+                let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
+                currentEntry.folded = !currentEntry.folded;
+                allDayData[key] = currentEntry; // allDayDataを更新
+                saveToLocalStorage(dateStr, key, currentEntry); // 折りたたみ状態を保存
+                render(); // UIを再描画して折りたたみ状態を反映
+            }
+        };
+        
+        // ヘッダー内の保存ボタンのクリックイベント（複数時間帯の折りたたみ）
+        saveBtnHeader.onclick = (e) => {
+            e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
+            
+            const dateStr = dp.value;
+            const currentDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+
+            // 全ての時間帯をループし、入力があるものだけ折りたたむ
+            for (let j = 0; j < 24; j++) {
+                const hourKey = (j + 4) % 24;
+                const timeKey = hourKey.toString().padStart(2, '0');
+                
+                let entryToUpdate = currentDayData[timeKey] || JSON.parse(JSON.stringify(defaultEntry));
+
+                // entryToUpdateが初期値と異なる場合は折りたたむ
+                if (!isEntryDefault(entryToUpdate)) {
+                    entryToUpdate.folded = true;
+                    currentDayData[timeKey] = entryToUpdate;
+                }
+            }
+            // allDayDataも更新
+            allDayData = currentDayData;
+            saveToLocalStorage(dateStr, null, null, allDayData.dailyNote); // 更新されたallDayDataをまとめて保存
+            render(); // UIを再描画して折りたたみ状態と最新データを反映
+        };
+
+        compact.style.display = entry.folded ? 'block' : 'none';
+      }
+    }
+
+    /**
+     * コンパクト表示のHTMLを更新するヘルパー関数
+     * @param {HTMLElement} compactElement - compact表示のdiv要素
+     * @param {object} entry - 該当時間帯のデータオブジェクト
+     */
+    function updateCompactView(compactElement, entry) {
+        compactElement.innerHTML = `
+          <strong>やったこと:</strong> ${entry.activity.join(', ') || '―'}<br>
+          <strong>気分:</strong> ${entry.activity.includes("睡眠") ? '睡眠中' : (entry.mood === '' ? '―' : entry.mood)}　<strong>疲労:</strong> ${entry.activity.includes("睡眠") ? '' : (entry.fatigue === '' ? '―' : entry.fatigue)}<br>
+          <strong>メモ:</strong> ${entry.free || '―'}
+        `;
+    }
+
+
+    // --- アプリ初期化とグローバルイベントリスナー ---
+
+    // 日付ピッカーの初期値を今日に設定
+    dp.value = new Date().toISOString().split('T')[0];
+    // 日付変更時にrender関数を呼び出す
+    dp.onchange = render;
+
+    // Daily Note関連の入力変更イベント
+    function saveDailyNoteChanges() {
+        const dateStr = dp.value;
+        const currentDailyNote = {
+            alcohol: alcoholChk.checked,
+            caffeine: caffeineChk.checked,
+            intakeMemo: intakeMemo.value,
+            memo: dailyMemo.value
+        };
+        // allDayDataのdailyNoteを更新してから保存
+        allDayData.dailyNote = currentDailyNote;
+        saveToLocalStorage(dateStr, null, null, currentDailyNote); // Daily Noteの変更のみを保存関数に渡す
+    }
+
+    alcoholChk.addEventListener('change', saveDailyNoteChanges);
+    caffeineChk.addEventListener('change', saveDailyNoteChanges);
+    intakeMemo.addEventListener('input', saveDailyNoteChanges);
+    dailyMemo.addEventListener('input', saveDailyNoteChanges);
+
+    // アプリロード時に初回レンダリング
+    render();
   </script>
 </body>
 </html>
