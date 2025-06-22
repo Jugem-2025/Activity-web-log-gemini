@@ -164,6 +164,23 @@
       margin-top: 6px; /* 上部に余白を追加 */
       font-size: 0.95em;
     }
+    .daily-note-save-btn-wrapper {
+        text-align: right; /* 右寄せ */
+        margin-top: 10px;
+    }
+    .daily-note-save-btn {
+        background: #4a90e2;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background 0.2s;
+    }
+    .daily-note-save-btn:hover {
+        background: #3b78c5;
+    }
   </style>
 </head>
 <body>
@@ -185,6 +202,9 @@
     <textarea id="intakeMemo" rows="2" placeholder="アルコールやカフェインの含まれる飲料と量を具体的に記入"></textarea>
     <label>メモ・備考：</label>
     <textarea id="dailyMemo" rows="3" placeholder="自由記入"></textarea>
+    <div class="daily-note-save-btn-wrapper">
+        <button id="dailyNoteSaveBtn" class="daily-note-save-btn">保存する</button>
+    </div>
   </div>
 
   <script>
@@ -202,6 +222,7 @@
     const intakeMemo = document.getElementById('intakeMemo');
     const dailyMemo = document.getElementById('dailyMemo');
     const dp = document.getElementById('recordDate');
+    const dailyNoteSaveBtn = document.getElementById('dailyNoteSaveBtn'); // 追加
 
     // 気分と疲労度の自動入力のために直前の値を保持する変数
     let lastMood = 50;
@@ -245,16 +266,23 @@
     function isEntryDefault(entry) {
         if (!entry) return true; // エントリ自体が存在しない場合はデフォルト
 
-        // activityが空か、"睡眠"のみで他の活動がない場合
-        const isActivityDefault = entry.activity.length === 0 || (entry.activity.length === 1 && entry.activity[0] === "睡眠" && entry.mood === '' && entry.fatigue === '');
-        
+        // activityが空か、"睡眠"のみで他の活動がなく、気分・疲労度が空である場合
+        const isActivitySleepDefault = entry.activity.length === 1 && entry.activity[0] === "睡眠" && entry.mood === '' && entry.fatigue === '';
+        const isActivityEmptyDefault = entry.activity.length === 0;
+
         // moodとfatigueが初期値の50であるか、または"睡眠"の場合は空であるか
         const isMoodFatigueDefault = (entry.mood === 50 && entry.fatigue === 50) || (entry.mood === '' && entry.fatigue === '' && entry.activity.includes("睡眠"));
         
         // freeが空であるか
         const isFreeDefault = entry.free === '';
 
-        return isActivityDefault && isMoodFatigueDefault && isFreeDefault;
+        // 「睡眠」のみで気分・疲労度が空の場合もデフォルトとはみなさない（折りたたみ対象にする）
+        // そのため、isActivitySleepDefault の場合は isEntryDefault は false になるべき
+        if (isActivitySleepDefault && isFreeDefault) {
+             return false; // 「睡眠」のみの場合はデフォルトではないと判定し、折りたたみ対象とする
+        }
+        
+        return (isActivityEmptyDefault && isMoodFatigueDefault && isFreeDefault);
     }
 
 
@@ -370,10 +398,10 @@
                   selMood.disabled = false;
                   selFat.disabled = false;
                   // デフォルト値をセット
-                  currentEntry.mood = 50; 
-                  currentEntry.fatigue = 50;
-                  selMood.value = 50;
-                  selFat.value = 50;
+                  currentEntry.mood = lastMood; // 直前の気分・疲労度を適用
+                  currentEntry.fatigue = lastFatigue;
+                  selMood.value = lastMood;
+                  selFat.value = lastFatigue;
                 }
                 if (!currentEntry.activity.includes(tag)) {
                   currentEntry.activity.push(tag);
@@ -385,10 +413,10 @@
                  selMood.disabled = false;
                  selFat.disabled = false;
                  // 睡眠解除時もデフォルト値をセット
-                 currentEntry.mood = 50; 
-                 currentEntry.fatigue = 50;
-                 selMood.value = 50;
-                 selFat.value = 50;
+                 currentEntry.mood = lastMood; 
+                 currentEntry.fatigue = lastFatigue;
+                 selMood.value = lastMood;
+                 selFat.value = lastFatigue;
               }
             }
             // allDayDataを更新してから保存
@@ -433,10 +461,10 @@
             selMood.disabled = true;
         } else {
             selMood.disabled = false;
-            // moodがデータになければ50を初期値とする
+            // moodがデータになければlastMoodを初期値とする
             if (entry.mood === undefined || entry.mood === null || entry.mood === '') {
-                 selMood.value = 50;
-                 entry.mood = 50; // データも50にする
+                 selMood.value = lastMood;
+                 entry.mood = lastMood; // データも更新
             }
         }
         // 気分選択の変更時
@@ -468,10 +496,10 @@
             selFat.disabled = true;
         } else {
             selFat.disabled = false;
-            // fatigueがデータになければ50を初期値とする
+            // fatigueがデータになければlastFatigueを初期値とする
             if (entry.fatigue === undefined || entry.fatigue === null || entry.fatigue === '') {
-                 selFat.value = 50;
-                 entry.fatigue = 50; // データも50にする
+                 selFat.value = lastFatigue;
+                 entry.fatigue = lastFatigue; // データも更新
             }
         }
         // 疲労度選択の変更時
@@ -528,6 +556,7 @@
                 let entryToUpdate = currentDayData[timeKey] || JSON.parse(JSON.stringify(defaultEntry));
 
                 // entryToUpdateが初期値と異なる場合は折りたたむ
+                // 「睡眠」のみの場合も折りたたみ対象となるように isEntryDefault を修正済み
                 if (!isEntryDefault(entryToUpdate)) {
                     entryToUpdate.folded = true;
                     currentDayData[timeKey] = entryToUpdate;
@@ -578,10 +607,16 @@
         saveToLocalStorage(dateStr, null, null, currentDailyNote); // Daily Noteの変更のみを保存関数に渡す
     }
 
+    // 各要素のイベントリスナーを設定
     alcoholChk.addEventListener('change', saveDailyNoteChanges);
     caffeineChk.addEventListener('change', saveDailyNoteChanges);
     intakeMemo.addEventListener('input', saveDailyNoteChanges);
     dailyMemo.addEventListener('input', saveDailyNoteChanges);
+    // デイリーノートの保存ボタンのイベントリスナーを追加
+    dailyNoteSaveBtn.addEventListener('click', () => {
+        saveDailyNoteChanges();
+        alert('デイリーノートを保存しました！'); // 保存確認メッセージ
+    });
 
     // アプリロード時に初回レンダリング
     render();
