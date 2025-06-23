@@ -93,12 +93,13 @@
         margin: 0;
         padding: 0;
     }
+    /* DailyNoteのサマリーのスタイルを調整 */
     .daily-summary {
       font-size: 0.8em;
       color: #666;
-      margin-top: 3px; /* 上マージンを減らす */
-      padding-top: 3px; /* 上パディングを減らす */
-      border-top: 1px dashed #eee;
+      margin-top: 5px; /* 上マージンを少し大きく */
+      padding-top: 5px; /* 上パディングを少し大きく */
+      border-top: 1px dashed #ccc; /* 境界線を少し濃く */
     }
     .daily-summary p {
         margin: 0;
@@ -186,7 +187,7 @@
     function getMonday(date) {
       const d = new Date(date);
       const day = d.getDay(); // 0 = 日曜, 1 = 月曜, ...
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // 月曜日に調整 (日曜日の場合は前の月曜へ)
+      const diff = d.getDate() - day + (day === 0 ? 1 : 1); // 月曜日に調整 (日曜日の場合は当日の月曜へ、それ以外は当日の月曜へ)
       d.setDate(diff);
       d.setHours(0, 0, 0, 0); // 時間をリセット
       return d;
@@ -272,19 +273,22 @@
             td.textContent = '―'; // データがない場合
           }
 
-          // DailyNoteのサマリーをセルの下部に追加
-          const dailyNote = dailyData.dailyNote;
-          if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
-            const summaryDiv = document.createElement('div');
-            summaryDiv.className = 'daily-summary';
-            // 各項目はPタグで包み、改行させる
-            if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
-            if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
-            if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
-            if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
-            td.appendChild(summaryDiv);
+          // DailyNoteのサマリーを4時台のセル（hour === 4 の時）にのみ追加
+          // hourが4の時は、iが0の時
+          if (i === 0) { // 各日の最初の時間帯のセル (4時台)
+            const dailyNote = dailyData.dailyNote;
+            if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'daily-summary';
+                // 各項目はPタグで包み、改行させる
+                if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
+                if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
+                if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
+                if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
+                td.appendChild(summaryDiv);
+            }
           }
-
+          
           tr.appendChild(td);
         });
         weeklyTableBody.appendChild(tr);
