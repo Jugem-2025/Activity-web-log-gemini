@@ -199,7 +199,8 @@
 
     // 日付を "MM/DD(曜日)" 形式でフォーマット (ローカルタイムゾーンで表示)
     function formatDate(date) {
-      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); // ローカル日付として再構築
+      // Dateオブジェクトをローカルタイムゾーンで解釈し直す
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); 
       const month = (localDate.getMonth() + 1).toString().padStart(2, '0');
       const day = localDate.getDate().toString().padStart(2, '0');
       const dayOfWeek = daysOfWeek[localDate.getDay()]; // ローカル曜日
@@ -256,14 +257,8 @@
             activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
 
-            // 睡眠中の場合は気分と疲労度を表示せず、「睡眠中」と表示し、コンパクトなスタイルを適用
-            if (isSleeping) {
-              const sleepP = document.createElement('p');
-              sleepP.textContent = '睡眠中';
-              sleepP.classList.add('sleep-entry'); // 新しいクラスを追加
-              td.appendChild(sleepP);
-            } else {
-              // 気分と疲労度（「睡眠」ではない場合のみ表示）
+            // 睡眠中の場合は気分と疲労度を空欄にする
+            if (!isSleeping) { // 睡眠中でない場合のみ気分・疲労度を表示
               const moodFatigueP = document.createElement('p');
               // 気分→気, 疲労度→疲 で1行にまとめる
               moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
