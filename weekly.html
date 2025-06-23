@@ -93,13 +93,12 @@
         margin: 0;
         padding: 0;
     }
-    /* DailyNoteのサマリーのスタイルを調整 */
     .daily-summary {
       font-size: 0.8em;
       color: #666;
-      margin-top: 5px; /* 上マージンを少し大きく */
-      padding-top: 5px; /* 上パディングを少し大きく */
-      border-top: 1px dashed #ccc; /* 境界線を少し濃く */
+      margin-top: 3px; /* 上マージンを減らす */
+      padding-top: 3px; /* 上パディングを減らす */
+      border-top: 1px dashed #eee;
     }
     .daily-summary p {
         margin: 0;
@@ -183,28 +182,34 @@
 
     let currentMonday = getMonday(new Date()); // 現在表示している週の月曜日
 
-    // 指定された日付の週の月曜日を取得する関数
+    // 指定された日付の週の月曜日を取得する関数 (UTC基準)
     function getMonday(date) {
-      const d = new Date(date);
-      const day = d.getDay(); // 0 = 日曜, 1 = 月曜, ...
-      const diff = d.getDate() - day + (day === 0 ? 1 : 1); // 月曜日に調整 (日曜日の場合は当日の月曜へ、それ以外は当日の月曜へ)
-      d.setDate(diff);
-      d.setHours(0, 0, 0, 0); // 時間をリセット
-      return d;
+        const d = new Date(date);
+        // UTCの曜日を取得 (0=日曜, 1=月曜...)
+        const day = d.getUTCDay();
+        // UTCの日付を月曜日に調整
+        // 日曜(0)の場合は6日前 (前の週の月曜日)
+        // 月曜(1)の場合は0日前
+        // 火曜(2)の場合は1日前 ...
+        const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+        d.setUTCDate(diff);
+        d.setUTCHours(0, 0, 0, 0); // 時間をリセット (UTC)
+        return d;
     }
 
-    // 日付を "MM/DD(曜日)" 形式でフォーマット
+    // 日付を "MM/DD(曜日)" 形式でフォーマット (ローカルタイムゾーンで表示)
     function formatDate(date) {
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
-      const dayOfWeek = daysOfWeek[date.getDay()];
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()); // ローカル日付として再構築
+      const month = (localDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = localDate.getDate().toString().padStart(2, '0');
+      const dayOfWeek = daysOfWeek[localDate.getDay()]; // ローカル曜日
       return `${month}/${day}(${dayOfWeek})`;
     }
 
     // 週の表示範囲を更新する関数
     function updateWeekDisplay() {
       const sunday = new Date(currentMonday);
-      sunday.setDate(currentMonday.getDate() + 6);
+      sunday.setUTCDate(currentMonday.getUTCDate() + 6); // UTCで6日加算
       weekDisplay.textContent = `${formatDate(currentMonday)} - ${formatDate(sunday)}`;
     }
 
@@ -216,7 +221,7 @@
       const datesInWeek = [];
       for (let i = 0; i < 7; i++) {
         const date = new Date(currentMonday);
-        date.setDate(currentMonday.getDate() + i);
+        date.setUTCDate(currentMonday.getUTCDate() + i); // UTCで日付を進める
         datesInWeek.push(date);
 
         const th = document.createElement('th');
@@ -236,6 +241,8 @@
 
         datesInWeek.forEach(date => {
           const td = document.createElement('td');
+          // LocalStorageからデータを取得するためのキーを生成
+          // `YYYY-MM-DD`形式のキーを生成するために、UTCの日付からISO文字列を生成し、日付部分のみ使用
           const dateStr = date.toISOString().split('T')[0];
           const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
           const entry = dailyData[timeKey];
@@ -273,22 +280,19 @@
             td.textContent = '―'; // データがない場合
           }
 
-          // DailyNoteのサマリーを4時台のセル（hour === 4 の時）にのみ追加
-          // hourが4の時は、iが0の時
-          if (i === 0) { // 各日の最初の時間帯のセル (4時台)
-            const dailyNote = dailyData.dailyNote;
-            if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
-                const summaryDiv = document.createElement('div');
-                summaryDiv.className = 'daily-summary';
-                // 各項目はPタグで包み、改行させる
-                if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
-                if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
-                if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
-                if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
-                td.appendChild(summaryDiv);
-            }
+          // DailyNoteのサマリーをセルの下部に追加
+          const dailyNote = dailyData.dailyNote;
+          if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'daily-summary';
+            // 各項目はPタグで包み、改行させる
+            if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
+            if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
+            if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
+            if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
+            td.appendChild(summaryDiv);
           }
-          
+
           tr.appendChild(td);
         });
         weeklyTableBody.appendChild(tr);
@@ -298,12 +302,12 @@
 
     // イベントリスナー
     prevWeekBtn.addEventListener('click', () => {
-      currentMonday.setDate(currentMonday.getDate() - 7);
+      currentMonday.setUTCDate(currentMonday.getUTCDate() - 7); // UTCで7日減算
       renderWeeklyTable();
     });
 
     nextWeekBtn.addEventListener('click', () => {
-      currentMonday.setDate(currentMonday.getDate() + 7);
+      currentMonday.setUTCDate(currentMonday.getUTCDate() + 7); // UTCで7日加算
       renderWeeklyTable();
     });
 
@@ -343,8 +347,11 @@
         });
 
         // CanvasをA4サイズにトリミングまたはスケーリング
-        const a4WidthPx = 210 / 25.4 * 96; // A4幅 (mm) をpxに変換 (96dpiの場合)
-        const a4HeightPx = 297 / 25.4 * 96; // A4高さ (mm) をpxに変換
+        // 1インチあたりのピクセル数を96dpiとする
+        const dpi = 96;
+        const mmPerInch = 25.4;
+        const a4WidthPx = (210 / mmPerInch) * dpi; // A4幅 (mm) をpxに変換
+        const a4HeightPx = (297 / mmPerInch) * dpi; // A4高さ (mm) をpxに変換
 
         const outputCanvas = document.createElement('canvas');
         outputCanvas.width = a4WidthPx;
