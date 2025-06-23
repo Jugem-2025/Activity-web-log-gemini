@@ -111,35 +111,85 @@
         /* 必要に応じて、paddingやline-heightをさらに調整してコンパクトに */
     }
 
-    /* 印刷用スタイル (A4サイズ調整) */
+    /* 印刷用スタイル (横長A4サイズ調整) */
     @media print {
       body {
         margin: 0;
         padding: 0;
         max-width: none;
-        width: 210mm; /* A4幅 */
-        height: 297mm; /* A4高さ */
+        width: 297mm; /* A4横長幅 */
+        height: 210mm; /* A4横長高さ */
         overflow: hidden; /* 余分なスクロールバー非表示 */
+        display: flex; /* 中央配置用 */
+        justify-content: center; /* 中央配置用 */
+        align-items: center; /* 中央配置用 */
       }
       header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
-        display: none;
+        display: none !important;
       }
       #weeklyTableContainer {
         border: none;
         box-shadow: none;
         padding: 0;
-        width: 100%;
-        height: 100%;
+        /* A4横長全体の92% (左右の余白4%ずつを除いた部分) */
+        width: 92%; 
+        /* A4横長全体の97% (上下の余白1.5%ずつを除いた部分) */
+        height: 97%; 
         display: block; /* table-containerをブロック要素に */
         overflow: visible; /* 印刷時はスクロール不要 */
+        box-sizing: border-box; /* paddingを含めた幅・高さ */
       }
       #weeklyTable {
         width: 100%;
         height: 100%;
-        font-size: 0.7em; /* 印刷時にフォントサイズをさらに小さく */
+        border-collapse: collapse; /* セルの境界線を結合 */
+        table-layout: fixed; /* カラム幅を固定 */
+        font-size: 0.5em; /* 印刷時にフォントサイズをさらに小さく調整 */
       }
+
+      /* 列幅の調整 */
+      #weeklyTable thead tr th:first-child,
+      #weeklyTable tbody tr td:first-child {
+        width: calc(8% / 0.92 * 100%); /* '時間' 列 8% (全体の幅に対する比率) */
+        min-width: 0; /* min-widthをリセット */
+      }
+      #weeklyTable thead tr th:not(:first-child),
+      #weeklyTable tbody tr td:not(:first-child) {
+        width: calc(12% / 0.92 * 100%); /* 各日付列 12% (全体の幅に対する比率) */
+        min-width: 0; /* min-widthをリセット */
+      }
+
+      /* 行高の調整 */
+      #weeklyTable thead tr {
+        height: calc(3% / 0.97 * 100%); /* 時間や日付の表示の行 3% */
+      }
+      #weeklyTable tbody tr {
+        height: calc(96% / 25 / 0.97 * 100%); /* 各時間帯の行 4% (24時間分) + 備考行で合計25行 */
+      }
+      #weeklyTable tbody tr:last-child { /* 備考行 */
+          height: calc(96% / 25 / 0.97 * 100%); /* 他の時間行と同じ高さに設定 */
+      }
+
+
       #weeklyTable th, #weeklyTable td {
-        padding: 2px 4px; /* 印刷時のパディングをさらに調整 */
+        border: 1px solid #eee;
+        padding: 1px 2px; /* 印刷時のパディングをさらに調整 */
+        vertical-align: top;
+        overflow: hidden; /* 内容がはみ出た場合に隠す */
+        text-overflow: ellipsis; /* はみ出たテキストを...で表示 */
+      }
+      #weeklyTable td p {
+        margin: 0;
+        padding: 0;
+        line-height: 1.1;
+      }
+      .daily-summary {
+        margin-top: 1px;
+        padding-top: 1px;
+        border-top: 1px dashed #ddd;
+      }
+      .daily-summary p {
+        font-size: 0.9em; /* 日メモの文字サイズ調整 */
       }
     }
   </style>
@@ -321,20 +371,91 @@
     saveImageBtn.addEventListener('click', async (e) => {
         e.preventDefault(); // デフォルトのリンク動作を防止
 
-        const element = document.getElementById('weeklyTableContainer');
+        // 画像化する要素をテーブルコンテナ全体に変更
+        const element = document.body; // body全体を対象にして、bodyのpaddingで余白を表現
 
-        // 印刷用CSSを適用するためのスタイル要素を作成
+        // 印刷用CSSを一時的に適用 (html2canvasが適用されたスタイルを読み取るため)
         const printStyle = document.createElement('style');
-        printStyle.id = 'print-style'; // 後で削除するためにIDを設定
+        printStyle.id = 'print-style-for-capture'; // 後で削除するためにIDを設定
         printStyle.innerHTML = `
-            body { margin: 0; padding: 0; max-width: none; width: 210mm; height: 297mm; overflow: hidden; }
-            header, .week-navigation, .top-icons { display: none !important; } /* !importantで優先 */
-            #weeklyTableContainer {
-                border: none; box-shadow: none; padding: 0;
-                width: 100%; height: 100%; display: block; overflow: visible;
+            body {
+                margin: 0;
+                /* 余白を指定。A4横長サイズ (297x210mm) の各辺に指定されたパーセンテージを適用 */
+                /* width: 297mm, height: 210mm */
+                /* 上: 1.5% of 210mm = 3.15mm */
+                /* 右: 4% of 297mm = 11.88mm */
+                /* 下: 1.5% of 210mm = 3.15mm */
+                /* 左: 4% of 297mm = 11.88mm */
+                padding: 3.15mm 11.88mm 3.15mm 11.88mm;
+                max-width: none;
+                width: 297mm; /* A4横長幅 */
+                height: 210mm; /* A4横長高さ */
+                overflow: hidden; /* 余分なスクロールバー非表示 */
+                display: block !important; /* html2canvasがhidden要素をキャプチャしないため */
+                box-sizing: border-box; /* paddingを含めて幅・高さを計算 */
             }
-            #weeklyTable { width: 100%; height: 100%; font-size: 0.7em; }
-            #weeklyTable th, #weeklyTable td { padding: 2px 4px; }
+            header, .week-navigation, .top-icons {
+                display: none !important;
+            }
+            #weeklyTableContainer {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+                width: 100%; /* bodyのpaddingを除いた残りの100% */
+                height: 100%; /* bodyのpaddingを除いた残りの100% */
+                display: block;
+                overflow: visible;
+                box-sizing: border-box;
+            }
+            #weeklyTable {
+                width: 100%;
+                height: 100%;
+                border-collapse: collapse;
+                table-layout: fixed; /* カラム幅を固定 */
+                font-size: 0.5em; /* 印刷時にフォントサイズをさらに小さく調整 */
+            }
+
+            /* 列幅の調整 */
+            #weeklyTable thead tr th:first-child,
+            #weeklyTable tbody tr td:first-child {
+                width: calc(8% / (8% + 84%) * 100%); /* '時間' 列 8% (テーブルの幅に対する比率) */
+            }
+            #weeklyTable thead tr th:not(:first-child),
+            #weeklyTable tbody tr td:not(:first-child) {
+                width: calc(12% / (8% + 84%) * 100%); /* 各日付列 12% (テーブルの幅に対する比率) */
+            }
+
+            /* 行高の調整 */
+            #weeklyTable thead tr {
+                height: calc(3% / (3% + 96%) * 100%); /* 時間や日付の表示の行 3% */
+            }
+            #weeklyTable tbody tr {
+                height: calc((96% / 25) / (3% + 96%) * 100%); /* 各時間帯の行 4% (24時間分) + 備考行で合計25行 */
+            }
+            #weeklyTable tbody tr:last-child { /* 備考行 */
+                height: calc((96% / 25) / (3% + 96%) * 100%); /* 他の時間行と同じ高さに設定 */
+            }
+
+            #weeklyTable th, #weeklyTable td {
+                border: 1px solid #eee;
+                padding: 1px 2px;
+                vertical-align: top;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            #weeklyTable td p {
+                margin: 0;
+                padding: 0;
+                line-height: 1.1;
+            }
+            .daily-summary {
+                margin-top: 1px;
+                padding-top: 1px;
+                border-top: 1px dashed #ddd;
+            }
+            .daily-summary p {
+                font-size: 0.9em;
+            }
         `;
         document.head.appendChild(printStyle);
 
@@ -342,64 +463,52 @@
         const canvas = await html2canvas(element, {
             scale: 2, // 高解像度でレンダリング
             useCORS: true,
-            // 描画する要素の現在のスクロール幅と高さをそのまま使用
+            // body要素全体の幅と高さをキャプチャ
             windowWidth: element.scrollWidth, 
             windowHeight: element.scrollHeight,
-            // x, y, width, height オプションで要素の全体をキャプチャ
-            x: element.scrollLeft,
-            y: element.scrollTop,
-            width: element.scrollWidth,
-            height: element.scrollHeight,
+            x: 0, // bodyの左上から
+            y: 0, // bodyの左上から
+            width: element.offsetWidth, // bodyの表示幅
+            height: element.offsetHeight, // bodyの表示高さ
         });
 
-        // CanvasをA4サイズにトリミングまたはスケーリング
-        // 1インチあたりのピクセル数を96dpiとする
-        const dpi = 96;
+        // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
+        const dpi = 300; // 印刷に適した高解像度 (ブラウザのデフォルトは96dpi)
         const mmPerInch = 25.4;
-        const a4WidthPx = (210 / mmPerInch) * dpi; // A4幅 (mm) をpxに変換
-        const a4HeightPx = (297 / mmPerInch) * dpi; // A4高さ (mm) をpxに変換
+        const a4LandscapeWidthPx = (297 / mmPerInch) * dpi; // A4横長幅 (mm) をpxに変換
+        const a4LandscapeHeightPx = (210 / mmPerInch) * dpi; // A4横長高さ (mm) をpxに変換
 
         const outputCanvas = document.createElement('canvas');
-        outputCanvas.width = a4WidthPx;
-        outputCanvas.height = a4HeightPx;
+        outputCanvas.width = a4LandscapeWidthPx;
+        outputCanvas.height = a4LandscapeHeightPx;
         const ctx = outputCanvas.getContext('2d');
 
-        // 元のcanvasの内容をoutputCanvasに描画（A4サイズに合わせて調整）
-        // アスペクト比を保ちつつ、A4サイズにフィットさせる
-        const canvasAspectRatio = canvas.width / canvas.height;
-        const a4AspectRatio = a4WidthPx / a4HeightPx;
-
-        let drawWidth, drawHeight;
-        if (canvasAspectRatio > a4AspectRatio) {
-            // キャンバスがA4より横長の場合、幅をA4に合わせ高さを調整
-            drawWidth = a4WidthPx;
-            drawHeight = a4WidthPx / canvasAspectRatio;
-        } else {
-            // キャンバスがA4より縦長または同じ比率の場合、高さをA4に合わせ幅を調整
-            drawHeight = a4HeightPx;
-            drawWidth = a4HeightPx * canvasAspectRatio;
-        }
-
-        // 中央に配置
-        const offsetX = (a4WidthPx - drawWidth) / 2;
-        const offsetY = (a4HeightPx - drawHeight) / 2;
-
-        ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
+        // 元のcanvasの内容をoutputCanvasに描画（A4サイズにフィットさせる）
+        ctx.drawImage(canvas, 0, 0, a4LandscapeWidthPx, a4LandscapeHeightPx);
 
         // 画像をダウンロード
         const imgData = outputCanvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.href = imgData;
-        link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}.png`;
+        link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}_A4L.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
         // 印刷用CSSを元に戻す
-        const styleToRemove = document.getElementById('print-style');
+        const styleToRemove = document.getElementById('print-style-for-capture');
         if (styleToRemove) {
             document.head.removeChild(styleToRemove);
         }
+
+        // html2canvas適用中にbodyに付与されたスタイルをリセット（もしあれば）
+        // html2canvasは要素のdisplayプロパティを一時的に変更することがあるため
+        document.body.style.display = ''; 
+        document.body.style.width = '';
+        document.body.style.height = '';
+        document.body.style.overflow = '';
+        document.body.style.padding = '';
+        document.body.style.margin = '';
     });
 
     // 初期レンダリング
