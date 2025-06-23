@@ -230,7 +230,7 @@
         dateRow.appendChild(th);
       }
 
-      // 4時スタートで24時間分の行を生成
+      // 各時間帯の行を生成 (4:00 から翌日の3:00 まで)
       for (let i = 0; i < 24; i++) {
         const hour = (i + 4) % 24;
         const timeKey = hour.toString().padStart(2, '0');
@@ -242,56 +242,67 @@
 
         datesInWeek.forEach(date => {
           const td = document.createElement('td');
-          // LocalStorageからデータを取得するためのキーを生成
-          // `YYYY-MM-DD`形式のキーを生成するために、UTCの日付からISO文字列を生成し、日付部分のみ使用
           const dateStr = date.toISOString().split('T')[0];
           const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
           const entry = dailyData[timeKey];
 
           if (entry) {
-            // "睡眠"が含まれているかチェック
             const isSleeping = entry.activity.includes("睡眠");
 
-            // やったこと (内容のみ表示、Pタグは維持)
+            // やったこと
             const activityP = document.createElement('p');
             activityP.textContent = entry.activity.join(', ') || '―';
             td.appendChild(activityP);
 
-            // 睡眠中の場合は気分と疲労度を空欄にする
-            if (!isSleeping) { // 睡眠中でない場合のみ気分・疲労度を表示
+            // 睡眠中でない場合のみ気分・疲労度を表示
+            if (!isSleeping) {
               const moodFatigueP = document.createElement('p');
-              // 気分→気, 疲労度→疲 で1行にまとめる
               moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
               td.appendChild(moodFatigueP);
             }
             
-            // 自由記入欄 (項目名は維持)
+            // 自由記入欄
             if (entry.free) {
                 const freeTxtP = document.createElement('p');
-                freeTxtP.textContent = `メモ: ${entry.free}`; // テキストコンテンツに統一
+                freeTxtP.textContent = `メモ: ${entry.free}`;
                 td.appendChild(freeTxtP);
             }
           } else {
             td.textContent = '―'; // データがない場合
           }
-
-          // DailyNoteのサマリーをセルの下部に追加
-          const dailyNote = dailyData.dailyNote;
-          if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
-            const summaryDiv = document.createElement('div');
-            summaryDiv.className = 'daily-summary';
-            // 各項目はPタグで包み、改行させる
-            if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
-            if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
-            if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
-            if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
-            td.appendChild(summaryDiv);
-          }
-
           tr.appendChild(td);
         });
         weeklyTableBody.appendChild(tr);
       }
+
+      // デイリーノートのサマリー行を生成
+      const dailyNoteTr = document.createElement('tr');
+      const dailyNoteHeader = document.createElement('th');
+      dailyNoteHeader.textContent = '備考'; // ヘッダーを「備考」に変更
+      dailyNoteTr.appendChild(dailyNoteHeader);
+
+      datesInWeek.forEach(date => {
+        const td = document.createElement('td');
+        const dateStr = date.toISOString().split('T')[0];
+        const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+        const dailyNote = dailyData.dailyNote;
+
+        if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
+          const summaryDiv = document.createElement('div');
+          summaryDiv.className = 'daily-summary'; // スタイルは既存のものを再利用
+
+          if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
+          if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
+          if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
+          if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
+          td.appendChild(summaryDiv);
+        } else {
+          td.textContent = '―'; // データがない場合
+        }
+        dailyNoteTr.appendChild(td);
+      });
+      weeklyTableBody.appendChild(dailyNoteTr); // テーブルボディの最後に追加
+
       updateWeekDisplay();
     }
 
