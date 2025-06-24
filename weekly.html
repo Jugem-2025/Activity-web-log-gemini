@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>週間表示</title>
+  <title>週間活動内訳</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body {
@@ -89,9 +89,17 @@
       background: white;
       line-height: 1.2; /* 行間を調整 */
     }
-    #weeklyTable td p {
+    /* 各項目を縦に並べるためのスタイル */
+    #weeklyTable td .item-row {
         margin: 0;
         padding: 0;
+        line-height: 1.1; /* 行の高さを詰める */
+        word-wrap: break-word; /* 長い単語の折り返し */
+    }
+    #weeklyTable td .mood-fatigue-value {
+        text-align: right; /* 数値は右寄せで見やすく */
+        font-weight: bold;
+        color: #2c3e50;
     }
     .daily-summary {
       font-size: 0.8em;
@@ -100,7 +108,7 @@
       padding-top: 3px; /* 上パディングを減らす */
       border-top: 1px dashed #eee;
     }
-    .daily-summary p {
+    .daily-summary .item-row {
         margin: 0;
         padding: 0;
     }
@@ -108,88 +116,93 @@
     .sleep-entry {
         font-style: italic; /* 斜体 */
         color: #888; /* 少し薄い色 */
-        /* 必要に応じて、paddingやline-heightをさらに調整してコンパクトに */
     }
 
     /* 印刷用スタイル (横長A4サイズ調整) */
     @media print {
       body {
-        margin: 0;
-        padding: 0;
-        max-width: none;
-        width: 297mm; /* A4横長幅 */
-        height: 210mm; /* A4横長高さ */
-        overflow: hidden; /* 余分なスクロールバー非表示 */
-        display: flex; /* 中央配置用 */
-        justify-content: center; /* 中央配置用 */
-        align-items: center; /* 中央配置用 */
+        margin: 0 !important;
+        /* A4横長幅 (297mm) と高さ (210mm) を基準に、余白を計算 */
+        /* 左の余白3%: 297mm * 0.03 = 8.91mm */
+        /* 右の余白2%: 297mm * 0.02 = 5.94mm */
+        /* 上下の余白（仮で全体に対する割合で設定、必要に応じて調整） */
+        padding: 4mm 5.94mm 4mm 8.91mm !important; /* 上下左右のpadding */
+        max-width: none !important;
+        width: 297mm !important; /* A4横長幅 */
+        height: 210mm !important; /* A4横長高さ */
+        overflow: hidden !important;
+        display: block !important; /* html2canvasで隠れないように */
+        box-sizing: border-box !important;
+        background-color: white !important; /* 背景を白に */
       }
       header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
         display: none !important;
       }
       #weeklyTableContainer {
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        /* A4横長全体の92% (左右の余白4%ずつを除いた部分) */
-        width: 92%; 
-        /* A4横長全体の97% (上下の余白1.5%ずつを除いた部分) */
-        height: 97%; 
-        display: block; /* table-containerをブロック要素に */
-        overflow: visible; /* 印刷時はスクロール不要 */
-        box-sizing: border-box; /* paddingを含めた幅・高さ */
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        /* bodyのpaddingを除いた残りの幅・高さ */
+        /* 幅: 100% - 3% - 2% = 95% をテーブルの幅にする */
+        width: calc(100% - 8.91mm - 5.94mm) !important; /* bodyのpaddingを除いた実効幅 */
+        height: 100% !important; 
+        display: block !important; /* table-containerをブロック要素に */
+        overflow: visible !important; /* 印刷時はスクロール不要 */
+        box-sizing: border-box !important;
       }
       #weeklyTable {
-        width: 100%;
-        height: 100%;
-        border-collapse: collapse; /* セルの境界線を結合 */
-        table-layout: fixed; /* カラム幅を固定 */
-        font-size: 0.5em; /* 印刷時にフォントサイズをさらに小さく調整 */
+        width: 100% !important; /* コンテナいっぱいに広がる */
+        height: 100% !important;
+        border-collapse: collapse !important; /* セルの境界線を結合 */
+        table-layout: fixed !important; /* カラム幅を固定 */
+        font-size: 0.5em !important; /* 印刷時にフォントサイズをさらに小さく調整 */
       }
 
       /* 列幅の調整 */
       #weeklyTable thead tr th:first-child,
       #weeklyTable tbody tr td:first-child {
-        width: calc(8% / 0.92 * 100%); /* '時間' 列 8% (全体の幅に対する比率) */
-        min-width: 0; /* min-widthをリセット */
+        width: 4% !important; /* '時間' 列 4% */
+        min-width: 0 !important;
       }
       #weeklyTable thead tr th:not(:first-child),
       #weeklyTable tbody tr td:not(:first-child) {
-        width: calc(12% / 0.92 * 100%); /* 各日付列 12% (全体の幅に対する比率) */
-        min-width: 0; /* min-widthをリセット */
+        width: calc(96% / 7) !important; /* 残りの96%を7日で均等に分割 */
+        min-width: 0 !important;
       }
 
       /* 行高の調整 */
       #weeklyTable thead tr {
-        height: calc(3% / 0.97 * 100%); /* 時間や日付の表示の行 3% */
+        height: 3% !important; /* 時間や日付の表示の行 3% */
       }
       #weeklyTable tbody tr {
-        height: calc(96% / 25 / 0.97 * 100%); /* 各時間帯の行 4% (24時間分) + 備考行で合計25行 */
+        height: calc(97% / 25) !important; /* 各時間帯の行 + 備考行で合計25行 */
       }
-      #weeklyTable tbody tr:last-child { /* 備考行 */
-          height: calc(96% / 25 / 0.97 * 100%); /* 他の時間行と同じ高さに設定 */
-      }
-
 
       #weeklyTable th, #weeklyTable td {
-        border: 1px solid #eee;
-        padding: 1px 2px; /* 印刷時のパディングをさらに調整 */
-        vertical-align: top;
-        overflow: hidden; /* 内容がはみ出た場合に隠す */
-        text-overflow: ellipsis; /* はみ出たテキストを...で表示 */
+        border: 1px solid #eee !important;
+        padding: 0.5mm 1mm !important; /* 印刷時のパディングをさらに調整 */
+        vertical-align: top !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
       }
-      #weeklyTable td p {
-        margin: 0;
-        padding: 0;
-        line-height: 1.1;
+      /* 印刷時のセル内要素のスタイル調整 */
+      #weeklyTable td .item-row {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1 !important; /* 印刷時により行間を詰める */
+          font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
+      }
+      #weeklyTable td .mood-fatigue-value {
+          font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
       }
       .daily-summary {
-        margin-top: 1px;
-        padding-top: 1px;
-        border-top: 1px dashed #ddd;
+          margin-top: 0.5mm !important;
+          padding-top: 0.5mm !important;
+          border-top: 1px dashed #ddd !important;
+          font-size: 0.8em !important; /* 日メモの文字サイズ調整 */
       }
-      .daily-summary p {
-        font-size: 0.9em; /* 日メモの文字サイズ調整 */
+      .daily-summary .item-row {
+          font-size: 1em !important; /* 親要素のフォントサイズに乗算されるように */
       }
     }
   </style>
@@ -300,25 +313,66 @@
             const isSleeping = entry.activity.includes("睡眠");
 
             // やったこと
-            const activityP = document.createElement('p');
-            activityP.textContent = entry.activity.join(', ') || '―';
-            td.appendChild(activityP);
+            const activityDiv = document.createElement('div');
+            activityDiv.className = 'item-row';
+            activityDiv.textContent = entry.activity.join(', ') || '―';
+            td.appendChild(activityDiv);
 
             // 睡眠中でない場合のみ気分・疲労度を表示
             if (!isSleeping) {
-              const moodFatigueP = document.createElement('p');
-              moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
-              td.appendChild(moodFatigueP);
+              // 気分 (数値のみ)
+              const moodDiv = document.createElement('div');
+              moodDiv.className = 'item-row mood-fatigue-value';
+              moodDiv.textContent = entry.mood === '' || entry.mood === null ? '―' : entry.mood;
+              td.appendChild(moodDiv);
+
+              // 疲労度 (数値のみ)
+              const fatigueDiv = document.createElement('div');
+              fatigueDiv.className = 'item-row mood-fatigue-value';
+              fatigueDiv.textContent = entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue;
+              td.appendChild(fatigueDiv);
+            } else {
+              // 睡眠中の場合は気分と疲労度の場所に何も表示しないか、'-'などを表示
+              const moodDiv = document.createElement('div');
+              moodDiv.className = 'item-row sleep-entry';
+              moodDiv.textContent = '―'; // または空に
+              td.appendChild(moodDiv);
+
+              const fatigueDiv = document.createElement('div');
+              fatigueDiv.className = 'item-row sleep-entry';
+              fatigueDiv.textContent = '―'; // または空に
+              td.appendChild(fatigueDiv);
             }
             
-            // 自由記入欄
+            // 自由記入欄 (これも個別項目として表示)
             if (entry.free) {
-                const freeTxtP = document.createElement('p');
-                freeTxtP.textContent = `メモ: ${entry.free}`;
-                td.appendChild(freeTxtP);
+                const freeTxtDiv = document.createElement('div');
+                freeTxtDiv.className = 'item-row';
+                freeTxtDiv.textContent = `メモ: ${entry.free}`;
+                td.appendChild(freeTxtDiv);
             }
           } else {
-            td.textContent = '―'; // データがない場合
+            // データがない場合も、やったこと、気分、疲労度の行を用意
+            const activityDiv = document.createElement('div');
+            activityDiv.className = 'item-row';
+            activityDiv.textContent = '―';
+            td.appendChild(activityDiv);
+
+            const moodDiv = document.createElement('div');
+            moodDiv.className = 'item-row mood-fatigue-value';
+            moodDiv.textContent = '―';
+            td.appendChild(moodDiv);
+
+            const fatigueDiv = document.createElement('div');
+            fatigueDiv.className = 'item-row mood-fatigue-value';
+            fatigueDiv.textContent = '―';
+            td.appendChild(fatigueDiv);
+
+            // メモ欄も空で確保
+            const freeTxtDiv = document.createElement('div');
+            freeTxtDiv.className = 'item-row';
+            freeTxtDiv.textContent = '―';
+            td.appendChild(freeTxtDiv);
           }
           tr.appendChild(td);
         });
@@ -341,10 +395,30 @@
           const summaryDiv = document.createElement('div');
           summaryDiv.className = 'daily-summary'; // スタイルは既存のものを再利用
 
-          if (dailyNote.alcohol) summaryDiv.innerHTML += '<p>・アルコール摂取</p>';
-          if (dailyNote.caffeine) summaryDiv.innerHTML += '<p>・カフェイン摂取</p>';
-          if (dailyNote.intakeMemo) summaryDiv.innerHTML += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
-          if (dailyNote.memo) summaryDiv.innerHTML += `<p>・日メモ: ${dailyNote.memo}</p>`;
+          if (dailyNote.alcohol) {
+              const p = document.createElement('p');
+              p.className = 'item-row';
+              p.textContent = '・アルコール摂取';
+              summaryDiv.appendChild(p);
+          }
+          if (dailyNote.caffeine) {
+              const p = document.createElement('p');
+              p.className = 'item-row';
+              p.textContent = '・カフェイン摂取';
+              summaryDiv.appendChild(p);
+          }
+          if (dailyNote.intakeMemo) {
+              const p = document.createElement('p');
+              p.className = 'item-row';
+              p.textContent = `・摂取状況: ${dailyNote.intakeMemo}`;
+              summaryDiv.appendChild(p);
+          }
+          if (dailyNote.memo) {
+              const p = document.createElement('p');
+              p.className = 'item-row';
+              p.textContent = `・日メモ: ${dailyNote.memo}`;
+              summaryDiv.appendChild(p);
+          }
           td.appendChild(summaryDiv);
         } else {
           td.textContent = '―'; // データがない場合
@@ -371,90 +445,103 @@
     saveImageBtn.addEventListener('click', async (e) => {
         e.preventDefault(); // デフォルトのリンク動作を防止
 
-        // 画像化する要素をテーブルコンテナ全体に変更
-        const element = document.body; // body全体を対象にして、bodyのpaddingで余白を表現
+        const element = document.body; // body全体を対象
 
-        // 印刷用CSSを一時的に適用 (html2canvasが適用されたスタイルを読み取るため)
+        // 印刷用CSSを一時的に適用
         const printStyle = document.createElement('style');
         printStyle.id = 'print-style-for-capture'; // 後で削除するためにIDを設定
+
+        // A4サイズ（横長）のミリメートル値
+        const a4WidthMm = 297;
+        const a4HeightMm = 210;
+
+        // bodyのpaddingを計算（A4の比率から）
+        // 左の余白3%: 297mm * 0.03 = 8.91mm
+        // 右の余白2%: 297mm * 0.02 = 5.94mm
+        const paddingLeftMm = a4WidthMm * 0.03; 
+        const paddingRightMm = a4WidthMm * 0.02;
+        // 上下の余白は適当な値で調整
+        const paddingTopBottomMm = 4; // 仮で4mm
+
         printStyle.innerHTML = `
             body {
-                margin: 0;
-                /* 余白を指定。A4横長サイズ (297x210mm) の各辺に指定されたパーセンテージを適用 */
-                /* width: 297mm, height: 210mm */
-                /* 上: 1.5% of 210mm = 3.15mm */
-                /* 右: 4% of 297mm = 11.88mm */
-                /* 下: 1.5% of 210mm = 3.15mm */
-                /* 左: 4% of 297mm = 11.88mm */
-                padding: 3.15mm 11.88mm 3.15mm 11.88mm;
-                max-width: none;
-                width: 297mm; /* A4横長幅 */
-                height: 210mm; /* A4横長高さ */
-                overflow: hidden; /* 余分なスクロールバー非表示 */
-                display: block !important; /* html2canvasがhidden要素をキャプチャしないため */
-                box-sizing: border-box; /* paddingを含めて幅・高さを計算 */
+                margin: 0 !important;
+                padding: ${paddingTopBottomMm}mm ${paddingRightMm}mm ${paddingTopBottomMm}mm ${paddingLeftMm}mm !important;
+                max-width: none !important;
+                width: ${a4WidthMm}mm !important; /* A4横長幅 */
+                height: ${a4HeightMm}mm !important; /* A4横長高さ */
+                overflow: hidden !important;
+                display: block !important;
+                box-sizing: border-box !important;
+                background-color: white !important; /* 背景を白に */
             }
             header, .week-navigation, .top-icons {
                 display: none !important;
             }
             #weeklyTableContainer {
-                border: none;
-                box-shadow: none;
-                padding: 0;
-                width: 100%; /* bodyのpaddingを除いた残りの100% */
-                height: 100%; /* bodyのpaddingを除いた残りの100% */
-                display: block;
-                overflow: visible;
-                box-sizing: border-box;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                /* bodyのpaddingを除いた残りの幅・高さ */
+                width: 100% !important; 
+                height: 100% !important; 
+                display: block !important;
+                overflow: visible !important;
+                box-sizing: border-box !important;
             }
             #weeklyTable {
-                width: 100%;
-                height: 100%;
-                border-collapse: collapse;
-                table-layout: fixed; /* カラム幅を固定 */
-                font-size: 0.5em; /* 印刷時にフォントサイズをさらに小さく調整 */
+                width: 100% !important; /* コンテナいっぱいに広がる */
+                height: 100% !important;
+                border-collapse: collapse !important; /* セルの境界線を結合 */
+                table-layout: fixed !important; /* カラム幅を固定 */
+                font-size: 0.5em !important; /* 印刷時にフォントサイズをさらに小さく調整 */
             }
 
             /* 列幅の調整 */
             #weeklyTable thead tr th:first-child,
             #weeklyTable tbody tr td:first-child {
-                width: calc(8% / (8% + 84%) * 100%); /* '時間' 列 8% (テーブルの幅に対する比率) */
+                width: 4% !important; /* '時間' 列 4% */
+                min-width: 0 !important;
             }
             #weeklyTable thead tr th:not(:first-child),
             #weeklyTable tbody tr td:not(:first-child) {
-                width: calc(12% / (8% + 84%) * 100%); /* 各日付列 12% (テーブルの幅に対する比率) */
+                width: calc(96% / 7) !important; /* 残りの96%を7日で均等に分割 (91%の表示部分に対応) */
+                min-width: 0 !important;
             }
 
             /* 行高の調整 */
             #weeklyTable thead tr {
-                height: calc(3% / (3% + 96%) * 100%); /* 時間や日付の表示の行 3% */
+                height: 3% !important; /* 時間や日付の表示の行 3% */
             }
             #weeklyTable tbody tr {
-                height: calc((96% / 25) / (3% + 96%) * 100%); /* 各時間帯の行 4% (24時間分) + 備考行で合計25行 */
-            }
-            #weeklyTable tbody tr:last-child { /* 備考行 */
-                height: calc((96% / 25) / (3% + 96%) * 100%); /* 他の時間行と同じ高さに設定 */
+                height: calc(97% / 25) !important; /* 各時間帯の行 + 備考行で合計25行 */
             }
 
             #weeklyTable th, #weeklyTable td {
-                border: 1px solid #eee;
-                padding: 1px 2px;
-                vertical-align: top;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                border: 1px solid #eee !important;
+                padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整（ミリメートル単位） */
+                vertical-align: top !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
             }
-            #weeklyTable td p {
-                margin: 0;
-                padding: 0;
-                line-height: 1.1;
+            /* 印刷時のセル内要素のスタイル調整 */
+            #weeklyTable td .item-row {
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 1 !important; /* 印刷時により行間を詰める */
+                font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
+            }
+            #weeklyTable td .mood-fatigue-value {
+                font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
             }
             .daily-summary {
-                margin-top: 1px;
-                padding-top: 1px;
-                border-top: 1px dashed #ddd;
+                margin-top: 0.5mm !important;
+                padding-top: 0.5mm !important;
+                border-top: 1px dashed #ddd !important;
+                font-size: 0.8em !important; /* 日メモの文字サイズ調整 */
             }
-            .daily-summary p {
-                font-size: 0.9em;
+            .daily-summary .item-row {
+                font-size: 1em !important; /* 親要素のフォントサイズに乗算されるように */
             }
         `;
         document.head.appendChild(printStyle);
@@ -463,25 +550,28 @@
         const canvas = await html2canvas(element, {
             scale: 2, // 高解像度でレンダリング
             useCORS: true,
-            // body要素全体の幅と高さをキャプチャ
             windowWidth: element.scrollWidth, 
             windowHeight: element.scrollHeight,
-            x: 0, // bodyの左上から
-            y: 0, // bodyの左上から
-            width: element.offsetWidth, // bodyの表示幅
-            height: element.offsetHeight, // bodyの表示高さ
+            x: 0,
+            y: 0,
+            width: element.offsetWidth,
+            height: element.offsetHeight,
         });
 
         // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
-        const dpi = 300; // 印刷に適した高解像度 (ブラウザのデフォルトは96dpi)
+        const dpi = 300; 
         const mmPerInch = 25.4;
-        const a4LandscapeWidthPx = (297 / mmPerInch) * dpi; // A4横長幅 (mm) をpxに変換
-        const a4LandscapeHeightPx = (210 / mmPerInch) * dpi; // A4横長高さ (mm) をpxに変換
+        const a4LandscapeWidthPx = (a4WidthMm / mmPerInch) * dpi; 
+        const a4LandscapeHeightPx = (a4HeightMm / mmPerInch) * dpi; 
 
         const outputCanvas = document.createElement('canvas');
         outputCanvas.width = a4LandscapeWidthPx;
         outputCanvas.height = a4LandscapeHeightPx;
         const ctx = outputCanvas.getContext('2d');
+
+        // 背景を白で塗りつぶす（透過を防ぐため）
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
         // 元のcanvasの内容をoutputCanvasに描画（A4サイズにフィットさせる）
         ctx.drawImage(canvas, 0, 0, a4LandscapeWidthPx, a4LandscapeHeightPx);
@@ -501,14 +591,8 @@
             document.head.removeChild(styleToRemove);
         }
 
-        // html2canvas適用中にbodyに付与されたスタイルをリセット（もしあれば）
-        // html2canvasは要素のdisplayプロパティを一時的に変更することがあるため
-        document.body.style.display = ''; 
-        document.body.style.width = '';
-        document.body.style.height = '';
-        document.body.style.overflow = '';
-        document.body.style.padding = '';
-        document.body.style.margin = '';
+        // html2canvas適用中にbodyに付与された可能性のあるスタイルをリセット
+        document.body.style.cssText = ''; // これで多くのスタイルがリセットされます
     });
 
     // 初期レンダリング
