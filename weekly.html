@@ -494,3 +494,154 @@
                 box-sizing: border-box !important;
                 background-color: white !important; /* 背景を白に */
             }
+            header, .week-navigation, .top-icons {
+                display: none !important;
+            }
+            #weeklyTableContainer {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                width: 100% !important; 
+                height: 100% !important; 
+                display: block !important;
+                overflow: visible !important;
+                box-sizing: border-box !important;
+            }
+            #weeklyTable {
+                width: 100% !important; /* コンテナいっぱいに広がる */
+                height: 100% !important;
+                border-collapse: collapse !important; /* セルの境界線を結合 */
+                table-layout: fixed !important; /* カラム幅を固定 */
+                font-size: 0.5em !important; /* 印刷時にフォントサイズをさらに小さく調整 */
+            }
+
+            /* 列幅の調整 */
+            #weeklyTable thead tr th:first-child,
+            #weeklyTable tbody tr td:first-child {
+                width: 4% !important; /* '時間' 列 4% */
+                min-width: 0 !important;
+            }
+            #weeklyTable thead tr th:not(:first-child),
+            #weeklyTable tbody tr td:not(:first-child) {
+                width: calc(96% / 7) !important; /* 残りの96%を7日で均等に分割 */
+                min-width: 0 !important;
+            }
+
+            /* 行高の調整 */
+            #weeklyTable thead tr {
+                height: 3% !important; /* 時間や日付の表示の行 3% */
+            }
+            #weeklyTable tbody tr {
+                height: calc(97% / 25) !important; /* 各時間帯の行 + 備考行で合計25行 */
+            }
+
+            #weeklyTable th, #weeklyTable td {
+                border: 1px dotted #ddd !important; /* 印刷時も点線に */
+                padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整（ミリメートル単位） */
+                vertical-align: top !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                position: relative !important; /* free-textのabsolute配置用 */
+            }
+            /* 印刷時のセル内要素のスタイル調整 */
+            .daily-entry-content {
+                display: flex !important;
+                align-items: flex-start !important;
+                gap: 1mm !important; /* 印刷時により要素間の隙間を詰める */
+                line-height: 1 !important; /* 印刷時により行間を詰める */
+                font-size: 0.9em !important;
+            }
+            .daily-entry-content .activity {
+                flex-shrink: 0 !important;
+                max-width: 60% !important; /* 印刷時調整 */
+            }
+            .daily-entry-content .mood-value,
+            .daily-entry-content .fatigue-value {
+                flex-shrink: 0 !important;
+                width: 15% !important; /* 印刷時調整 */
+                text-align: right !important;
+                font-weight: bold !important;
+                color: #2c3e50 !important;
+            }
+            .daily-entry-content .free-text {
+                position: absolute !important;
+                bottom: 0.5mm !important;
+                left: 1mm !important;
+                right: 1mm !important;
+                font-size: 0.6em !important;
+                color: #777 !important;
+                line-height: 1.1 !important;
+                max-height: 1.8em !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: normal !important;
+            }
+            .daily-summary {
+                margin-top: 0.5mm !important;
+                padding-top: 0.5mm !important;
+                border-top: 1px dashed #ddd !important;
+                font-size: 0.8em !important;
+            }
+            .daily-summary div {
+                font-size: 1em !important;
+            }
+            .sleep-entry-circle {
+                border: 0.5px solid black !important;
+            }
+        `;
+        document.head.appendChild(printStyle);
+
+        // html2canvasで要素を画像化
+        const canvas = await html2canvas(element, {
+            scale: 2, // 高解像度でレンダリング
+            useCORS: true,
+            windowWidth: element.scrollWidth, 
+            windowHeight: element.scrollHeight,
+            x: 0,
+            y: 0,
+            width: element.offsetWidth,
+            height: element.offsetHeight,
+        });
+
+        // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
+        const dpi = 300; 
+        const mmPerInch = 25.4;
+        const a4LandscapeWidthPx = (a4WidthMm / mmPerInch) * dpi; 
+        const a4LandscapeHeightPx = (a4HeightMm / mmPerInch) * dpi; 
+
+        const outputCanvas = document.createElement('canvas');
+        outputCanvas.width = a4LandscapeWidthPx;
+        outputCanvas.height = a4LandscapeHeightPx;
+        const ctx = outputCanvas.getContext('2d');
+
+        // 背景を白で塗りつぶす（透過を防ぐため）
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+        // 元のcanvasの内容をoutputCanvasに描画（A4サイズにフィットさせる）
+        ctx.drawImage(canvas, 0, 0, a4LandscapeWidthPx, a4LandscapeHeightPx);
+
+        // 画像をダウンロード
+        const imgData = outputCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = `weekly_report_${currentMonday.toISOString().split('T')[0]}_A4L.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // 印刷用CSSを元に戻す
+        const styleToRemove = document.getElementById('print-style-for-capture');
+        if (styleToRemove) {
+            document.head.removeChild(styleToRemove);
+        }
+
+        // html2canvas適用中にbodyに付与された可能性のあるスタイルをリセット
+        document.body.style.cssText = ''; 
+    });
+
+    // 初期レンダリング
+    renderWeeklyTable();
+  </script>
+</body>
+</html>
