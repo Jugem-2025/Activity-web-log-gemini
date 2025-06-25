@@ -72,7 +72,7 @@
       width: 100%; /* コンテナいっぱいに広がる */
       border-collapse: collapse; /* セルの境界線を結合 */
       min-width: 900px; /* スマホで横スクロールさせるための最小幅を調整 */
-      table-layout: fixed; /* ★追加: 列幅を固定して格子状を保つ */
+      table-layout: fixed; /* 列幅を固定して格子状を保つ */
     }
     /* 時間列のスタイル */
     #weeklyTable th:first-child,
@@ -80,16 +80,20 @@
       width: 4%; /* 時間列の幅 */
       min-width: 40px; /* 最小幅 */
       white-space: nowrap;
+      padding: 4px 8px; /* パディングを統一 */
+      text-align: center; /* 時間表示を中央に */
     }
 
     /* 各曜日のヘッダーセル */
     #weeklyTable th.day-header {
       padding: 0; /* ヘッダーのパディングをリセット */
       border: 1px solid #eee; /* 日付の境界線 */
+      box-sizing: border-box; /* paddingとborderを幅に含める */
     }
     #weeklyTable th.day-header > div {
       display: flex;
       width: 100%;
+      height: 100%; /* 親のthに高さを合わせる */
     }
     #weeklyTable th.day-header .col-header {
       flex-grow: 1; /* 各サブ列ヘッダーが均等に幅を取る */
@@ -97,15 +101,15 @@
       padding: 4px 0px; /* ヘッダーのパディング */
       font-size: 0.85em; /* 文字を小さめに */
       font-weight: normal; /* 各サブ列ヘッダーのフォントを通常に */
+      box-sizing: border-box;
+      /* ここでは border-right を持たない。td/thにボーダーを集中させる */
     }
     /* 各曜日のサブ列の幅 (合計100%になるように調整) */
     #weeklyTable th.day-header .col-activity {
       width: 69.2%; /* 9/13 = 約69.2% */
-      border-right: 1px dashed #ccc; /* やったことと気分の境目 */
     }
     #weeklyTable th.day-header .col-mood {
       width: 15.4%; /* 2/13 = 約15.4% */
-      border-right: 1px dashed #ccc; /* 気分と疲労度の境目 */
     }
     #weeklyTable th.day-header .col-fatigue {
       width: 15.4%; /* 2/13 = 約15.4% */
@@ -115,8 +119,9 @@
       padding: 0; /* セルのパディングをリセット */
       vertical-align: top; /* 上揃え */
       font-size: 0.85em; /* 文字を小さめに */
-      border: 1px solid #eee; /* セルの境界線 */
+      border: 1px solid #eee; /* ★変更: セルの境界線はtd自体に持たせる */
       box-sizing: border-box; /* paddingとborderを幅に含める */
+      position: relative; /* 子要素のabsolute配置基準に */
     }
 
     /* 各曜日のデータセル */
@@ -125,7 +130,8 @@
       width: 100%;
       height: 100%; /* 親セルの高さに合わせる */
       min-height: 50px; /* 各時間帯セルの最小高さ */
-      border: none; /* td自身の境界線は使わない */
+      border: 1px solid #eee; /* ★変更: td自体に境界線を持たせる */
+      box-sizing: border-box;
     }
     #weeklyTable td.day-cell > div {
       flex-grow: 1; /* 各サブ列が均等に幅を取る */
@@ -134,17 +140,18 @@
       overflow: hidden; /* 内容がはみ出したら隠す */
       text-overflow: ellipsis; /* 省略記号 */
       word-wrap: break-word; /* 長い単語の折り返し */
-      min-height: 42px; /* 内容がない場合でも高さを確保（padding 4px + font-size 0.85em * line-height 1.2 くらいを考慮）*/
+      min-height: 42px; /* 内容がない場合でも高さを確保 */
       white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
+      /* ★変更: 内部divからはボーダーを削除 */
     }
     /* 各曜日のサブ列の幅 (合計100%になるように調整) */
     #weeklyTable td.day-cell .col-activity {
       width: 69.2%; /* 9/13 = 約69.2% */
-      border-right: 1px dashed #ccc; /* やったことと気分の境目 */
+      border-right: 1px dashed #ccc; /* ★変更: 内部divに破線ボーダーを残す */
     }
     #weeklyTable td.day-cell .col-mood {
       width: 15.4%; /* 2/13 = 約15.4% */
-      border-right: 1px dashed #ccc; /* 気分と疲労度の境目 */
+      border-right: 1px dashed #ccc; /* ★変更: 内部divに破線ボーダーを残す */
       text-align: right; /* 数値は右寄せで見やすく */
     }
     #weeklyTable td.day-cell .col-fatigue {
@@ -174,6 +181,8 @@
     #weeklyTable td.daily-summary-cell {
       padding: 0; /* 親セルのパディングをリセット */
       vertical-align: top;
+      border: 1px solid #eee; /* ★変更: td自体に境界線を持たせる */
+      box-sizing: border-box;
     }
 
     /* 印刷用スタイル (横長A4サイズ調整) */
@@ -189,11 +198,11 @@
         width: 297mm !important; /* A4横長幅 */
         height: 210mm !important; /* A4横長高さ */
         overflow: hidden !important;
-        display: block !important; /* html2canvasで隠れないように */
+        display: block !important;
         box-sizing: border-box !important;
         background-color: white !important; /* 背景を白に */
       }
-      header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
+      header, .week-navigation, .top-icons {
         display: none !important;
       }
       #weeklyTableContainer {
@@ -220,6 +229,7 @@
       #weeklyTable tbody tr td:first-child {
         width: 4% !important; /* '時間' 列 4% */
         min-width: 0 !important;
+        padding: 0.5mm 1mm !important; /* 印刷時パディング */
       }
       /* 各曜日のセル（全体） */
       #weeklyTable thead tr th.day-header,
@@ -559,6 +569,7 @@
             #weeklyTable tbody tr td:first-child {
                 width: 4% !important; /* '時間' 列 4% */
                 min-width: 0 !important;
+                padding: 0.5mm 1mm !important; /* 印刷時パディング */
             }
             /* 各曜日のセル（全体） */
             #weeklyTable thead tr th.day-header,
