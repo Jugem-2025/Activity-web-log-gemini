@@ -132,6 +132,8 @@
       overflow: hidden; /* 内容がはみ出したら隠す */
       text-overflow: ellipsis; /* 省略記号 */
       word-wrap: break-word; /* 長い単語の折り返し */
+      min-height: 42px; /* 内容がない場合でも高さを確保（padding 4px + font-size 0.85em * line-height 1.2 くらいを考慮）*/
+      white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
     }
     #weeklyTable td.day-cell .col-activity {
       width: calc(9% / 13% * 100%); /* 9/13 = 約69.2% */
@@ -163,6 +165,7 @@
       padding: 4px 8px;
       box-sizing: border-box;
       min-height: 50px; /* 最小高さを確保 */
+      white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
     }
     /* 備考欄のセル全体のスタイル */
     #weeklyTable td.daily-summary-cell {
@@ -261,6 +264,8 @@
           padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整 */
           line-height: 1 !important; /* 印刷時により行間を詰める */
           font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
+          min-height: 0 !important; /* 印刷時の最小高さをリセット */
+          white-space: pre-wrap !important; /* 印刷時も改行を保持 */
       }
       #weeklyTable td .mood-fatigue-value {
           font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
@@ -269,6 +274,7 @@
           padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整 */
           font-size: 0.8em !important; /* 日メモの文字サイズ調整 */
           min-height: 0 !important; /* 印刷時の最小高さをリセット */
+          white-space: pre-wrap !important; /* 印刷時も改行を保持 */
       }
     }
   </style>
@@ -406,14 +412,17 @@
             // やったこと
             activityDiv.textContent = entry.activity.join(', ');
 
-            // 睡眠中でない場合のみ気分・疲労度を表示
+            // 睡眠中でない場合のみ気分・疲労度を表示、未入力なら「0」を表示
             if (!isSleeping) {
-              moodDiv.textContent = entry.mood === '' || entry.mood === null ? '' : entry.mood;
-              fatigueDiv.textContent = entry.fatigue === '' || entry.fatigue === null ? '' : entry.fatigue;
+              moodDiv.textContent = (entry.mood === '' || entry.mood === null) ? '0' : entry.mood;
+              fatigueDiv.textContent = (entry.fatigue === '' || entry.fatigue === null) ? '0' : entry.fatigue;
             } else {
               activityDiv.classList.add('sleep-entry'); // 睡眠中はactivitiesも薄い色に
               moodDiv.classList.add('sleep-entry');
               fatigueDiv.classList.add('sleep-entry');
+              // 睡眠時は気分・疲労度は表示しないので空文字列
+              moodDiv.textContent = ''; 
+              fatigueDiv.textContent = '';
             }
             
             // 自由記入欄 (やったことの欄に追記)
@@ -421,7 +430,7 @@
                 activityDiv.textContent += (activityDiv.textContent ? '\n' : '') + `メモ: ${entry.free}`;
             }
           } 
-          // データがない場合は空のまま
+          // データがない場合（entryがnull/undefined）も空のdivがmin-heightで高さを保持
 
           td.appendChild(activityDiv);
           td.appendChild(moodDiv);
@@ -445,33 +454,38 @@
         const dailyData = JSON.parse(localStorage.getItem(dateStr) || '{}');
         const dailyNote = dailyData.dailyNote;
 
-        if (dailyNote && (dailyNote.alcohol || dailyNote.caffeine || dailyNote.intakeMemo || dailyNote.memo)) {
-          const summaryDiv = document.createElement('div');
-          summaryDiv.className = 'daily-summary'; // スタイルは既存のものを再利用
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'daily-summary'; // スタイルは既存のものを再利用
 
-          if (dailyNote.alcohol) {
-              const p = document.createElement('p');
-              p.textContent = '・アルコール摂取';
-              summaryDiv.appendChild(p);
-          }
-          if (dailyNote.caffeine) {
-              const p = document.createElement('p');
-              p.textContent = '・カフェイン摂取';
-              summaryDiv.appendChild(p);
-          }
-          if (dailyNote.intakeMemo) {
-              const p = document.createElement('p');
-              p.textContent = `・摂取状況: ${dailyNote.intakeMemo}`;
-              summaryDiv.appendChild(p);
-          }
-          if (dailyNote.memo) {
-              const p = document.createElement('p');
-              p.textContent = `・日メモ: ${dailyNote.memo}`;
-              summaryDiv.appendChild(p);
-          }
-          td.appendChild(summaryDiv);
+        let hasContent = false;
+        if (dailyNote) {
+            if (dailyNote.alcohol) {
+                const p = document.createElement('p');
+                p.textContent = '・アルコール摂取';
+                summaryDiv.appendChild(p);
+                hasContent = true;
+            }
+            if (dailyNote.caffeine) {
+                const p = document.createElement('p');
+                p.textContent = '・カフェイン摂取';
+                summaryDiv.appendChild(p);
+                hasContent = true;
+            }
+            if (dailyNote.intakeMemo) {
+                const p = document.createElement('p');
+                p.textContent = `・摂取状況: ${dailyNote.intakeMemo}`;
+                summaryDiv.appendChild(p);
+                hasContent = true;
+            }
+            if (dailyNote.memo) {
+                const p = document.createElement('p');
+                p.textContent = `・日メモ: ${dailyNote.memo}`;
+                summaryDiv.appendChild(p);
+                hasContent = true;
+            }
         }
-        // データがない場合は空のまま（何も表示しない）
+        // データがない場合でも、min-heightにより高さを確保するためにdivを追加
+        td.appendChild(summaryDiv);
         dailyNoteTr.appendChild(td);
       });
       weeklyTableBody.appendChild(dailyNoteTr); // テーブルボディの最後に追加
@@ -597,6 +611,8 @@
                 padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整 */
                 line-height: 1 !important; /* 印刷時により行間を詰める */
                 font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
+                min-height: 0 !important; /* 印刷時の最小高さをリセット */
+                white-space: pre-wrap !important; /* 印刷時も改行を保持 */
             }
             #weeklyTable td .mood-fatigue-value {
                 font-size: 0.9em !important; /* 印刷時のフォントサイズ調整 */
@@ -605,6 +621,7 @@
                 padding: 0.5mm 1mm !important; /* 印刷時のパディングを調整 */
                 font-size: 0.8em !important; /* 日メモの文字サイズ調整 */
                 min-height: 0 !important; /* 印刷時の最小高さをリセット */
+                white-space: pre-wrap !important; /* 印刷時も改行を保持 */
             }
         `;
         document.head.appendChild(printStyle);
@@ -663,3 +680,4 @@
   </script>
 </body>
 </html>
+
