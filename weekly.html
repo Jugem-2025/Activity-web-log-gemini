@@ -72,6 +72,7 @@
       width: 100%; /* コンテナいっぱいに広がる */
       border-collapse: collapse; /* セルの境界線を結合 */
       min-width: 900px; /* スマホで横スクロールさせるための最小幅を調整 */
+      table-layout: fixed; /* ★追加: 列幅を固定して格子状を保つ */
     }
     /* 時間列のスタイル */
     #weeklyTable th:first-child,
@@ -97,16 +98,17 @@
       font-size: 0.85em; /* 文字を小さめに */
       font-weight: normal; /* 各サブ列ヘッダーのフォントを通常に */
     }
+    /* 各曜日のサブ列の幅 (合計100%になるように調整) */
     #weeklyTable th.day-header .col-activity {
-      width: calc(9% / 13% * 100%); /* 9/13 = 約69.2% */
+      width: 69.2%; /* 9/13 = 約69.2% */
       border-right: 1px dashed #ccc; /* やったことと気分の境目 */
     }
     #weeklyTable th.day-header .col-mood {
-      width: calc(2% / 13% * 100%); /* 2/13 = 約15.4% */
+      width: 15.4%; /* 2/13 = 約15.4% */
       border-right: 1px dashed #ccc; /* 気分と疲労度の境目 */
     }
     #weeklyTable th.day-header .col-fatigue {
-      width: calc(2% / 13% * 100%); /* 2/13 = 約15.4% */
+      width: 15.4%; /* 2/13 = 約15.4% */
     }
 
     #weeklyTable td {
@@ -135,17 +137,18 @@
       min-height: 42px; /* 内容がない場合でも高さを確保（padding 4px + font-size 0.85em * line-height 1.2 くらいを考慮）*/
       white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
     }
+    /* 各曜日のサブ列の幅 (合計100%になるように調整) */
     #weeklyTable td.day-cell .col-activity {
-      width: calc(9% / 13% * 100%); /* 9/13 = 約69.2% */
+      width: 69.2%; /* 9/13 = 約69.2% */
       border-right: 1px dashed #ccc; /* やったことと気分の境目 */
     }
     #weeklyTable td.day-cell .col-mood {
-      width: calc(2% / 13% * 100%); /* 2/13 = 約15.4% */
+      width: 15.4%; /* 2/13 = 約15.4% */
       border-right: 1px dashed #ccc; /* 気分と疲労度の境目 */
       text-align: right; /* 数値は右寄せで見やすく */
     }
     #weeklyTable td.day-cell .col-fatigue {
-      width: calc(2% / 13% * 100%); /* 2/13 = 約15.4% */
+      width: 15.4%; /* 2/13 = 約15.4% */
       text-align: right; /* 数値は右寄せで見やすく */
     }
     .mood-fatigue-value {
@@ -198,11 +201,10 @@
         box-shadow: none !important;
         padding: 0 !important;
         /* bodyのpaddingを除いた残りの幅・高さ */
-        /* 幅: 100% - 3% - 2% = 95% をテーブルの幅にする */
-        width: calc(100% - 8.91mm - 5.94mm) !important; /* bodyのpaddingを除いた実効幅 */
+        width: 100% !important; 
         height: 100% !important; 
-        display: block !important; /* table-containerをブロック要素に */
-        overflow: visible !important; /* 印刷時はスクロール不要 */
+        display: block !important;
+        overflow: visible !important;
         box-sizing: border-box !important;
       }
       #weeklyTable {
@@ -229,17 +231,17 @@
       /* 各曜日のサブ列の幅 */
       #weeklyTable th.day-header .col-activity,
       #weeklyTable td.day-cell .col-activity {
-          width: calc(9% / 13% * 100%) !important; /* 9% */
+          width: 69.2% !important; /* 9% */
           border-right: 0.2mm dashed #ddd !important; /* 印刷時の点線 */
       }
       #weeklyTable th.day-header .col-mood,
       #weeklyTable td.day-cell .col-mood {
-          width: calc(2% / 13% * 100%) !important; /* 2% */
+          width: 15.4% !important; /* 2% */
           border-right: 0.2mm dashed #ddd !important; /* 印刷時の点線 */
       }
       #weeklyTable th.day-header .col-fatigue,
       #weeklyTable td.day-cell .col-fatigue {
-          width: calc(2% / 13% * 100%) !important; /* 2% */
+          width: 15.4% !important; /* 2% */
       }
 
 
@@ -412,15 +414,14 @@
             // やったこと
             activityDiv.textContent = entry.activity.join(', ');
 
-            // 睡眠中でない場合のみ気分・疲労度を表示、未入力なら「0」を表示
+            // 睡眠中でない場合のみ気分・疲労度を表示。空なら何も表示しない。
             if (!isSleeping) {
-              moodDiv.textContent = (entry.mood === '' || entry.mood === null) ? '0' : entry.mood;
-              fatigueDiv.textContent = (entry.fatigue === '' || entry.fatigue === null) ? '0' : entry.fatigue;
+              moodDiv.textContent = (entry.mood === '' || entry.mood === null) ? '' : entry.mood;
+              fatigueDiv.textContent = (entry.fatigue === '' || entry.fatigue === null) ? '' : entry.fatigue;
             } else {
               activityDiv.classList.add('sleep-entry'); // 睡眠中はactivitiesも薄い色に
               moodDiv.classList.add('sleep-entry');
               fatigueDiv.classList.add('sleep-entry');
-              // 睡眠時は気分・疲労度は表示しないので空文字列
               moodDiv.textContent = ''; 
               fatigueDiv.textContent = '';
             }
@@ -457,32 +458,25 @@
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'daily-summary'; // スタイルは既存のものを再利用
 
-        let hasContent = false;
+        // 備考欄に表示する内容を組み立て
+        let dailyNoteContent = [];
         if (dailyNote) {
             if (dailyNote.alcohol) {
-                const p = document.createElement('p');
-                p.textContent = '・アルコール摂取';
-                summaryDiv.appendChild(p);
-                hasContent = true;
+                dailyNoteContent.push('・アルコール摂取');
             }
             if (dailyNote.caffeine) {
-                const p = document.createElement('p');
-                p.textContent = '・カフェイン摂取';
-                summaryDiv.appendChild(p);
-                hasContent = true;
+                dailyNoteContent.push('・カフェイン摂取');
             }
             if (dailyNote.intakeMemo) {
-                const p = document.createElement('p');
-                p.textContent = `・摂取状況: ${dailyNote.intakeMemo}`;
-                summaryDiv.appendChild(p);
-                hasContent = true;
+                dailyNoteContent.push(`・摂取状況: ${dailyNote.intakeMemo}`);
             }
             if (dailyNote.memo) {
-                const p = document.createElement('p');
-                p.textContent = `・日メモ: ${dailyNote.memo}`;
-                summaryDiv.appendChild(p);
-                hasContent = true;
+                dailyNoteContent.push(`・日メモ: ${dailyNote.memo}`);
             }
+        }
+        // 内容がある場合のみtextContentを設定
+        if (dailyNoteContent.length > 0) {
+            summaryDiv.textContent = dailyNoteContent.join('\n');
         }
         // データがない場合でも、min-heightにより高さを確保するためにdivを追加
         td.appendChild(summaryDiv);
@@ -576,17 +570,17 @@
             /* 各曜日のサブ列の幅 */
             #weeklyTable th.day-header .col-activity,
             #weeklyTable td.day-cell .col-activity {
-                width: calc(9% / 13% * 100%) !important; /* 9% */
+                width: 69.2% !important; /* 9% */
                 border-right: 0.2mm dashed #ddd !important; /* 印刷時の点線 */
             }
             #weeklyTable th.day-header .col-mood,
             #weeklyTable td.day-cell .col-mood {
-                width: calc(2% / 13% * 100%) !important; /* 2% */
+                width: 15.4% !important; /* 2% */
                 border-right: 0.2mm dashed #ddd !important; /* 印刷時の点線 */
             }
             #weeklyTable th.day-header .col-fatigue,
             #weeklyTable td.day-cell .col-fatigue {
-                width: calc(2% / 13% * 100%) !important; /* 2% */
+                width: 15.4% !important; /* 2% */
             }
 
 
@@ -680,4 +674,3 @@
   </script>
 </body>
 </html>
-
