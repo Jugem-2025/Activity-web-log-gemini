@@ -90,7 +90,7 @@
       min-width: 40px; /* 最小幅 */
       white-space: nowrap;
       text-align: center;
-      background-color: #f8f8f8; /* 時間列の背景色 */
+      background-color: #f8f8f8; /* 時間列の背景色を少し変える */
       padding: 4px 8px; /* 時間列にのみパディングを設定 */
     }
 
@@ -111,18 +111,19 @@
         width: calc(96% / 7); /* 時間列を除いた残りを7日で均等に分割 */
     }
     #weeklyTable #subHeaderRow th > div {
-        display: flex;
+        display: flex; /* 子要素をflexboxで横並びにする */
         width: 100%;
         height: 100%;
     }
     #weeklyTable #subHeaderRow .col-header {
-      flex-grow: 1;
+      flex-grow: 1; /* 残りのスペースを埋める */
       text-align: center;
       padding: 4px 0px;
       font-size: 0.8em; /* ヘッダーの文字を少し小さく */
       font-weight: normal;
       box-sizing: border-box;
       position: relative; /* 擬似要素の基準に */
+      white-space: nowrap; /* テキストが折り返されないように */
     }
     /* サブ列の間の破線（ヘッダー）- 擬似要素で描画 */
     #weeklyTable #subHeaderRow .col-activity::after,
@@ -142,7 +143,7 @@
 
     /* 各時間帯のデータセル */
     #weeklyTable td.day-cell {
-      display: flex; /* 内部のdivを横並びにする */
+      display: flex; /* 内部のdivをflexboxで横並びにする */
       width: calc(96% / 7); /* 7日分の均等幅 */
       min-height: 50px; /* 各時間帯セルの最小高さ */
     }
@@ -151,8 +152,8 @@
       padding: 4px 8px;
       box-sizing: border-box;
       overflow: hidden;
-      text-overflow: ellipsis;
-      word-wrap: break-word;
+      text-overflow: ellipsis; /* はみ出したテキストを...で表示 */
+      word-wrap: break-word; /* 長い単語でも折り返す */
       min-height: 42px; /* 内容がない場合でも高さを確保 */
       white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
       position: relative; /* 擬似要素の基準に */
@@ -382,14 +383,14 @@
 
         // 日付ヘッダー
         const thDate = document.createElement('th');
-        thDate.classList.add('day-header'); // クラスを追加
+        // thDate.classList.add('day-header'); // 不要なクラス削除
         thDate.setAttribute('colspan', '3'); // 3つのサブ列にまたがる
         thDate.textContent = formatDate(date);
         dateRow.appendChild(thDate);
 
         // 各曜日のサブヘッダー
         const thSub = document.createElement('th');
-        thSub.classList.add('day-header'); // クラスを追加
+        // thSub.classList.add('day-header'); // 不要なクラス削除
         thSub.innerHTML = `
           <div class="col-activity col-header">やったこと</div>
           <div class="col-mood col-header">気分</div>
