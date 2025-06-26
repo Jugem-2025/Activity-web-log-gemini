@@ -111,81 +111,155 @@
         /* 必要に応じて、paddingやline-heightをさらに調整してコンパクトに */
     }
 
+    /* 新しいスタイル：各日付セル内のレイアウト */
+    .activity-cell-content {
+      display: flex;
+      flex-wrap: nowrap; /* 折り返しを禁止 */
+      justify-content: space-between; /* 要素間にスペースを均等に配置 */
+      align-items: flex-start; /* 上揃え */
+      width: 100%; /* 親セルに合わせる */
+      min-height: 1em; /* 空の場合でも高さを持つ */
+    }
+    .activity-cell-content .activity-text {
+        flex: 0 0 70%; /* やったこと：約7割 */
+        word-break: break-all; /* 長い単語でも強制改行 */
+    }
+    .activity-cell-content .mood-fatigue {
+        flex: 0 0 30%; /* 気分・疲労度：約3割 */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end; /* 右揃え */
+        white-space: nowrap; /* 改行禁止 */
+        font-size: 0.9em;
+        line-height: 1.1;
+    }
+    .activity-cell-content .mood-fatigue p {
+        margin: 0;
+    }
+    /* 自由記入欄のスタイルはそのまま */
+    .activity-cell-content ~ p { /* .activity-cell-content の後の p タグに適用 */
+        font-size: 0.8em;
+        color: #555;
+    }
+
+
     /* 印刷用スタイル (横長A4サイズ調整) */
     @media print {
       body {
-        margin: 0;
-        padding: 0;
-        max-width: none;
-        width: 297mm; /* A4横長幅 */
-        height: 210mm; /* A4横長高さ */
-        overflow: hidden; /* 余分なスクロールバー非表示 */
-        display: flex; /* 中央配置用 */
-        justify-content: center; /* 中央配置用 */
-        align-items: center; /* 中央配置用 */
+        margin: 0 !important;
+        /* 左3%, 右2% の余白 = (3% + 2%) = 5% */
+        /* 上1%, 下1% の余白 = (1% + 1%) = 2% */
+        /* A4横長 (297mm x 210mm) */
+        padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
+        max-width: none !important;
+        width: 297mm !important; 
+        height: 210mm !important; 
+        overflow: hidden !important;
+        display: block !important;
+        box-sizing: border-box !important;
+        background-color: white !important; 
       }
-      header, .week-navigation, .top-icons { /* 印刷時に非表示にする要素 */
+      header, .week-navigation, .top-icons { 
         display: none !important;
       }
       #weeklyTableContainer {
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        /* bodyに余白があるので、widthとheightは100%にする */
-        width: 100%; 
-        height: 100%; 
-        display: block; /* table-containerをブロック要素に */
-        overflow: visible; /* 印刷時はスクロール不要 */
-        box-sizing: border-box; /* paddingを含めた幅・高さ */
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        width: 100% !important; /* bodyのpaddingを除いた残りの100% */
+        height: 100% !important; /* bodyのpaddingを除いた残りの100% */
+        display: block !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
       }
       #weeklyTable {
-        width: 100%;
-        height: 100%;
-        border-collapse: collapse; /* セルの境界線を結合 */
-        table-layout: fixed; /* カラム幅を固定 */
-        font-size: 0.5em; /* 印刷時にフォントサイズをさらに小さく調整 */
+        width: 100% !important;
+        height: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: fixed !important; 
+        font-size: 0.5em !important; 
       }
 
       /* 列幅の調整 */
       #weeklyTable thead tr th:first-child,
       #weeklyTable tbody tr td:first-child {
-        width: 8%; /* '時間' 列 8% */
-        min-width: 0; /* min-widthをリセット */
+        width: 4% !important; /* '時間' 列 4% */
+        min-width: 0 !important; 
       }
       #weeklyTable thead tr th:not(:first-child),
       #weeklyTable tbody tr td:not(:first-child) {
-        width: 12.857%; /* 各日付列 (100-8)/7 = 12.857% */
-        min-width: 0; /* min-widthをリセット */
+        width: 13% !important; /* 各日付列 13% */
+        min-width: 0 !important; 
       }
 
       /* 行高の調整 */
       #weeklyTable thead tr {
-        height: 3%; /* 時間や日付の表示の行 3% */
+        height: 2% !important; /* 日付と曜日の行 2% */
       }
       #weeklyTable tbody tr {
-        height: calc(97% / 25); /* 各時間帯の行 + 備考行で合計25行 */
+        height: 4% !important; /* 各時間帯の行 4% (24行) */
+      }
+      /* 備考行は時間帯の行と同じ高さにするか、別途調整が必要です。
+         ここでは各時間帯の行の高さに含めて、合計25行として調整します。
+         96% (時間帯) + 2% (日付) + 1% (上) + 1% (下) = 100%
+         今回の要望では時間帯の行が96%を占めるため、備考行もその一部として扱います。
+         tbodyの最後の行が備考行になります。
+      */
+      #weeklyTable tbody tr:last-child {
+          height: 4% !important; /* 備考行も4%としてカウント */
       }
 
 
       #weeklyTable th, #weeklyTable td {
-        border: 1px solid #eee;
-        padding: 1px 2px; /* 印刷時のパディングをさらに調整 */
-        vertical-align: top;
-        overflow: hidden; /* 内容がはみ出た場合に隠す */
-        text-overflow: ellipsis; /* はみ出たテキストを...で表示 */
+        border: 1px solid black !important; /* 罫線を実線に */
+        padding: 1mm 1mm !important; /* 印刷時のパディングを調整（ミリメートル単位） */
+        vertical-align: top !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        word-wrap: break-word; /* 長い単語の折り返し */
       }
       #weeklyTable td p {
-        margin: 0;
-        padding: 0;
-        line-height: 1.1;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.1 !important;
       }
       .daily-summary {
-        margin-top: 1px;
-        padding-top: 1px;
-        border-top: 1px dashed #ddd;
+        margin-top: 1mm !important;
+        padding-top: 1mm !important;
+        border-top: 1px solid #ddd !important; /* 実線に */
+        font-size: 0.9em !important;
       }
       .daily-summary p {
-        font-size: 0.9em;
+        font-size: 1em !important; 
+      }
+
+      /* 各日付セル内のレイアウト（印刷時） */
+      .activity-cell-content {
+        flex-direction: row !important; /* 横並びを保証 */
+        flex-wrap: nowrap !important;
+      }
+      .activity-cell-content .activity-text {
+          flex: 0 0 69% !important; /* 9%に相当 (全体の13%中の9%) */
+          font-size: 0.9em !important;
+      }
+      .activity-cell-content .mood-fatigue {
+          flex: 0 0 31% !important; /* 4%に相当 (全体の13%中の2%+2%) */
+          font-size: 0.9em !important;
+      }
+      .mood-fatigue .mood-value, .mood-fatigue .fatigue-value {
+          display: inline-block !important; /* 横並びにするためにインラインブロック */
+          width: 50% !important; /* 気分と疲労度をそれぞれ半分に */
+          text-align: right !important; /* 右寄せ */
+          padding-left: 1px !important;
+      }
+      .mood-fatigue .fatigue-value {
+          border-left: 1px solid #eee !important; /* 区切り線 */
+      }
+
+      /* 自由記入欄の調整 */
+      .activity-cell-content ~ p {
+          font-size: 0.8em !important;
+          margin-top: 1mm !important;
       }
     }
   </style>
@@ -295,26 +369,48 @@
           if (entry) {
             const isSleeping = entry.activity.includes("睡眠");
 
+            const cellContentDiv = document.createElement('div');
+            cellContentDiv.className = 'activity-cell-content';
+
             // やったこと
-            const activityP = document.createElement('p');
-            activityP.textContent = entry.activity.join(', ') || '―';
-            td.appendChild(activityP);
+            const activityTextDiv = document.createElement('div');
+            activityTextDiv.className = 'activity-text';
+            activityTextDiv.textContent = entry.activity.join(', ') || '―';
+            cellContentDiv.appendChild(activityTextDiv);
 
             // 睡眠中でない場合のみ気分・疲労度を表示
             if (!isSleeping) {
-              const moodFatigueP = document.createElement('p');
-              moodFatigueP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood} 疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
-              td.appendChild(moodFatigueP);
+              const moodFatigueDiv = document.createElement('div');
+              moodFatigueDiv.className = 'mood-fatigue';
+              
+              const moodP = document.createElement('p');
+              moodP.className = 'mood-value';
+              moodP.textContent = `気: ${entry.mood === '' || entry.mood === null ? '―' : entry.mood}`;
+              
+              const fatigueP = document.createElement('p');
+              fatigueP.className = 'fatigue-value';
+              fatigueP.textContent = `疲: ${entry.fatigue === '' || entry.fatigue === null ? '―' : entry.fatigue}`;
+
+              moodFatigueDiv.appendChild(moodP);
+              moodFatigueDiv.appendChild(fatigueP);
+              cellContentDiv.appendChild(moodFatigueDiv);
             }
             
-            // 自由記入欄
+            td.appendChild(cellContentDiv);
+
+            // 自由記入欄 (これは `activity-cell-content` の後に続く p タグとしてそのまま)
             if (entry.free) {
                 const freeTxtP = document.createElement('p');
                 freeTxtP.textContent = `メモ: ${entry.free}`;
                 td.appendChild(freeTxtP);
             }
           } else {
-            td.textContent = '―'; // データがない場合
+            // データがない場合も空の Flexbox コンテナを用意し、
+            // 高さを一定に保つためのプレースホルダーを挿入
+            const cellContentDiv = document.createElement('div');
+            cellContentDiv.className = 'activity-cell-content';
+            cellContentDiv.innerHTML = '<div class="activity-text">―</div><div class="mood-fatigue"></div>';
+            td.appendChild(cellContentDiv);
           }
           tr.appendChild(td);
         });
@@ -377,21 +473,19 @@
         const a4WidthMm = 297;
         const a4HeightMm = 210;
 
-        // bodyのpaddingを計算（A4の4%と1.5%）
-        const paddingLeftRightMm = a4WidthMm * 0.04; // 4%
-        const paddingTopBottomMm = a4HeightMm * 0.015; // 1.5%
-
         printStyle.innerHTML = `
             body {
                 margin: 0 !important;
-                padding: ${paddingTopBottomMm}mm ${paddingLeftRightMm}mm ${paddingTopBottomMm}mm ${paddingLeftRightMm}mm !important;
+                /* 左3%, 右2% の余白 = (3% + 2%) = 5% */
+                /* 上1%, 下1% の余白 = (1% + 1%) = 2% */
+                padding: calc(${a4HeightMm}mm * 0.01) calc(${a4WidthMm}mm * 0.02) calc(${a4HeightMm}mm * 0.01) calc(${a4WidthMm}mm * 0.03) !important;
                 max-width: none !important;
-                width: ${a4WidthMm}mm !important; /* A4横長幅 */
-                height: ${a4HeightMm}mm !important; /* A4横長高さ */
+                width: ${a4WidthMm}mm !important; 
+                height: ${a4HeightMm}mm !important; 
                 overflow: hidden !important;
                 display: block !important;
                 box-sizing: border-box !important;
-                background-color: white !important; /* 背景を白に */
+                background-color: white !important; 
             }
             header, .week-navigation, .top-icons {
                 display: none !important;
@@ -400,8 +494,8 @@
                 border: none !important;
                 box-shadow: none !important;
                 padding: 0 !important;
-                width: 100% !important; /* bodyのpaddingを除いた残りの100% */
-                height: 100% !important; /* bodyのpaddingを除いた残りの100% */
+                width: 100% !important; 
+                height: 100% !important; 
                 display: block !important;
                 overflow: visible !important;
                 box-sizing: border-box !important;
@@ -411,33 +505,41 @@
                 height: 100% !important;
                 border-collapse: collapse !important;
                 table-layout: fixed !important; /* カラム幅を固定 */
-                font-size: 0.5em !important; /* 印刷時にフォントサイズをさらに小さく調整 */
+                font-size: 0.5em !important; 
             }
 
             /* 列幅の調整 */
             #weeklyTable thead tr th:first-child,
             #weeklyTable tbody tr td:first-child {
-                width: 8% !important; /* '時間' 列 8% */
+                width: 4% !important; /* '時間' 列 4% */
+                min-width: 0 !important; 
             }
             #weeklyTable thead tr th:not(:first-child),
             #weeklyTable tbody tr td:not(:first-child) {
-                width: calc((100% - 8%) / 7) !important; /* 残りの幅を7列で均等に分割 */
+                width: 13% !important; /* 各日付列 13% */
+                min-width: 0 !important; 
             }
 
             /* 行高の調整 */
             #weeklyTable thead tr {
-                height: 3% !important; /* 時間や日付の表示の行 3% */
+                height: 2% !important; /* 日付と曜日の行 2% */
             }
             #weeklyTable tbody tr {
-                height: calc(97% / 25) !important; /* 各時間帯の行 + 備考行で合計25行 */
+                height: 4% !important; /* 各時間帯の行 4% (24行) */
+            }
+            /* 備考行も時間帯の行と同じ高さにする */
+            #weeklyTable tbody tr:last-child {
+                height: 4% !important; 
             }
 
+
             #weeklyTable th, #weeklyTable td {
-                border: 1px solid #eee !important;
-                padding: 1mm 2mm !important; /* 印刷時のパディングを調整（ミリメートル単位） */
+                border: 1px solid black !important; /* 罫線を実線に */
+                padding: 1mm 1mm !important; 
                 vertical-align: top !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
+                word-wrap: break-word; /* 長い単語の折り返し */
             }
             #weeklyTable td p {
                 margin: 0 !important;
@@ -447,11 +549,47 @@
             .daily-summary {
                 margin-top: 1mm !important;
                 padding-top: 1mm !important;
-                border-top: 1px dashed #ddd !important;
+                border-top: 1px solid black !important; /* 実線に */
                 font-size: 0.9em !important;
             }
             .daily-summary p {
-                font-size: 1em !important; /* 親要素のフォントサイズに乗算されるように */
+                font-size: 1em !important; 
+            }
+
+            /* 各日付セル内のレイアウト（印刷時） */
+            .activity-cell-content {
+                display: flex !important;
+                flex-direction: row !important; /* 横並びを保証 */
+                flex-wrap: nowrap !important;
+                justify-content: space-between !important;
+                align-items: flex-start !important;
+                width: 100% !important;
+            }
+            .activity-cell-content .activity-text {
+                flex: 0 0 69% !important; /* 9%に相当 (全体の13%中の9%) */
+                font-size: 0.9em !important;
+            }
+            .activity-cell-content .mood-fatigue {
+                flex: 0 0 31% !important; /* 4%に相当 (全体の13%中の2%+2%) */
+                display: flex !important;
+                flex-direction: row !important; /* 気分と疲労度を横並びにする */
+                align-items: flex-start !important;
+                font-size: 0.9em !important;
+            }
+            .mood-fatigue .mood-value, .mood-fatigue .fatigue-value {
+                display: inline-block !important; /* 横並びにするためにインラインブロック */
+                width: 50% !important; /* 気分と疲労度をそれぞれ半分に */
+                text-align: right !important; /* 右寄せ */
+                padding-left: 1px !important;
+            }
+            .mood-fatigue .fatigue-value {
+                border-left: 1px solid #eee !important; /* 区切り線 */
+            }
+
+            /* 自由記入欄の調整 */
+            .activity-cell-content ~ p {
+                font-size: 0.8em !important;
+                margin-top: 1mm !important;
             }
         `;
         document.head.appendChild(printStyle);
@@ -484,7 +622,7 @@
         ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
         // 元のcanvasの内容をoutputCanvasに描画（A4サイズにフィットさせる）
-        ctx.drawImage(canvas, 0, 0, a4LandscapeWidthPx, a4LandscapeHeightPx);
+        ctx.drawImage(canvas, 0, 0, outputCanvas.width, outputCanvas.height);
 
         // 画像をダウンロード
         const imgData = outputCanvas.toDataURL('image/png');
@@ -502,7 +640,7 @@
         }
 
         // html2canvas適用中にbodyに付与された可能性のあるスタイルをリセット
-        document.body.style.cssText = ''; // これで多くのスタイルがリセットされます
+        document.body.style.cssText = ''; 
     });
 
     // 初期レンダリング
