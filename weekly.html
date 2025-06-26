@@ -73,69 +73,78 @@
       border-collapse: collapse; /* セルの境界線を結合 */
       min-width: 900px; /* スマホで横スクロールさせるための最小幅を調整 */
       table-layout: fixed; /* 列幅を固定して格子状を保つ */
-      /* すべてのセルに共通の罫線をここで定義。個別のセルで上書き可能。 */
     }
+    /* すべてのth/tdに基本の罫線を適用 */
+    #weeklyTable th,
+    #weeklyTable td {
+      border: 1px solid #eee; /* 基本の罫線 */
+      box-sizing: border-box; /* パディングとボーダーを幅に含める */
+      vertical-align: top; /* 上揃え */
+      padding: 0; /* セル自体のパディングをリセット */
+    }
+
     /* 時間列のスタイル */
     #weeklyTable th:first-child,
     #weeklyTable td:first-child {
       width: 4%; /* 時間列の幅 */
       min-width: 40px; /* 最小幅 */
       white-space: nowrap;
-      padding: 4px 8px;
       text-align: center;
-      border: 1px solid #eee; /* ★重要: すべてのth/tdに基本の罫線 */
-      box-sizing: border-box;
-      background-color: #f8f8f8; /* 時間列の背景色を少し変える */
+      background-color: #f8f8f8; /* 時間列の背景色 */
+      padding: 4px 8px; /* 時間列にのみパディングを設定 */
     }
 
-    /* 各曜日のヘッダーセル */
-    #weeklyTable th.day-header {
-      padding: 0;
-      border: 1px solid #eee; /* ★重要: th自体に基本の罫線 */
-      box-sizing: border-box;
+    /* 日付ヘッダー行のセル (日付を表示) */
+    #weeklyTable #dateRow th {
+        text-align: center;
+        font-size: 0.9em;
+        font-weight: bold;
+        padding: 4px 0; /* 上下パディング */
+        width: calc(96% / 7); /* 時間列を除いた残りを7日で均等に分割 */
     }
-    #weeklyTable th.day-header > div {
-      display: flex;
-      width: 100%;
-      height: 100%; /* 親のthに高さを合わせる */
+
+    /* サブヘッダー行のセル (やったこと、気分、疲労度) */
+    #weeklyTable #subHeaderRow th {
+        padding: 0; /* 親thのパディングをリセット */
+        border-top: none; /* 上罫線はdateRowのthにあるので不要 */
+        border-bottom: 1px solid #eee; /* 下罫線 */
+        width: calc(96% / 7); /* 時間列を除いた残りを7日で均等に分割 */
     }
-    #weeklyTable th.day-header .col-header {
+    #weeklyTable #subHeaderRow th > div {
+        display: flex;
+        width: 100%;
+        height: 100%;
+    }
+    #weeklyTable #subHeaderRow .col-header {
       flex-grow: 1;
       text-align: center;
       padding: 4px 0px;
-      font-size: 0.85em;
+      font-size: 0.8em; /* ヘッダーの文字を少し小さく */
       font-weight: normal;
       box-sizing: border-box;
-      /* ここで幅を指定し、border-rightを追加 */
+      position: relative; /* 擬似要素の基準に */
     }
-    /* 各曜日のサブ列の幅と区切り線 (ヘッダー) */
-    #weeklyTable th.day-header .col-activity {
-      width: calc(69.2% + 1px); /* border分を考慮してわずかに調整 */
-      border-right: 1px dashed #ccc; /* サブ列の区切り線 */
-    }
-    #weeklyTable th.day-header .col-mood {
-      width: calc(15.4% + 1px); /* border分を考慮してわずかに調整 */
-      border-right: 1px dashed #ccc; /* サブ列の区切り線 */
-    }
-    #weeklyTable th.day-header .col-fatigue {
-      width: 15.4%;
+    /* サブ列の間の破線（ヘッダー）- 擬似要素で描画 */
+    #weeklyTable #subHeaderRow .col-activity::after,
+    #weeklyTable #subHeaderRow .col-mood::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        border-right: 1px dashed #ccc;
     }
 
-    #weeklyTable td {
-      padding: 0;
-      vertical-align: top;
-      font-size: 0.85em;
-      border: 1px solid #eee; /* ★重要: td自体に基本の罫線 */
-      box-sizing: border-box;
-    }
+    /* 各曜日のサブ列の幅 (合計100%になるように調整) */
+    #weeklyTable .col-activity { width: 69.2%; } /* 9/13 = 約69.2% */
+    #weeklyTable .col-mood { width: 15.4%; } /* 2/13 = 約15.4% */
+    #weeklyTable .col-fatigue { width: 15.4%; } /* 2/13 = 約15.4% */
 
-    /* 各曜日のデータセル */
+    /* 各時間帯のデータセル */
     #weeklyTable td.day-cell {
-      display: flex;
-      width: 100%;
-      height: 100%;
+      display: flex; /* 内部のdivを横並びにする */
+      width: calc(96% / 7); /* 7日分の均等幅 */
       min-height: 50px; /* 各時間帯セルの最小高さ */
-      box-sizing: border-box;
     }
     #weeklyTable td.day-cell > div {
       flex-grow: 1;
@@ -145,21 +154,23 @@
       text-overflow: ellipsis;
       word-wrap: break-word;
       min-height: 42px; /* 内容がない場合でも高さを確保 */
-      white-space: pre-wrap;
+      white-space: pre-wrap; /* 改行を保持し、必要に応じて折り返す */
+      position: relative; /* 擬似要素の基準に */
     }
-    /* 各曜日のサブ列の幅と区切り線 (データセル) */
-    #weeklyTable td.day-cell .col-activity {
-      width: calc(69.2% + 1px); /* border分を考慮してわずかに調整 */
-      border-right: 1px dashed #ccc; /* サブ列の区切り線 */
+    /* サブ列の間の破線（データセル）- 擬似要素で描画 */
+    #weeklyTable td.day-cell .col-activity::after,
+    #weeklyTable td.day-cell .col-mood::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        border-right: 1px dashed #ccc;
     }
-    #weeklyTable td.day-cell .col-mood {
-      width: calc(15.4% + 1px); /* border分を考慮してわずかに調整 */
-      border-right: 1px dashed #ccc; /* サブ列の区切り線 */
-      text-align: right;
-    }
+
+    #weeklyTable td.day-cell .col-mood,
     #weeklyTable td.day-cell .col-fatigue {
-      width: 15.4%;
-      text-align: right;
+      text-align: right; /* 数値は右寄せで見やすく */
     }
     .mood-fatigue-value {
         font-weight: bold;
@@ -180,16 +191,14 @@
       min-height: 50px; /* 最小高さを確保 */
       white-space: pre-wrap;
     }
-    /* 備考欄のセル全体のスタイル */
+    /* 備考欄のセル全体 */
     #weeklyTable td.daily-summary-cell {
-      padding: 0;
-      vertical-align: top;
-      border: 1px solid #eee; /* ★重要: td自体に基本の罫線 */
-      box-sizing: border-box;
+      width: calc(96% / 7); /* 7日分の均等幅 */
+      border-top: none; /* 上罫線は時間セルの下罫線にあるので不要 */
+      background-color: #f8f8f8; /* 備考欄の背景色を少し変える */
     }
-    /* 備考欄の背景色 */
-    #weeklyTable tbody tr:last-child td {
-        background-color: #f8f8f8;
+    #weeklyTable tbody tr:last-child th {
+        background-color: #f8f8f8; /* 備考欄の時間ヘッダーも色を合わせる */
     }
 
     /* 印刷用スタイル (横長A4サイズ調整) */
@@ -226,55 +235,53 @@
         font-size: 0.5em !important;
       }
 
-      /* 列幅の調整 */
-      #weeklyTable thead tr th:first-child,
-      #weeklyTable tbody tr td:first-child {
-        width: 4% !important;
-        min-width: 0 !important;
-        padding: 0.5mm 1mm !important;
-        background-color: #f8f8f8 !important; /* 印刷時も時間列の背景色 */
-      }
-      /* 各曜日のセル（全体） */
-      #weeklyTable thead tr th.day-header,
-      #weeklyTable tbody tr td.day-cell {
-        width: calc(96% / 7) !important;
-        min-width: 0 !important;
-        padding: 0 !important;
-      }
-      /* 各曜日のサブ列の幅 (印刷用) */
-      #weeklyTable th.day-header .col-activity,
-      #weeklyTable td.day-cell .col-activity {
-          width: calc(69.2% + 0.2mm) !important; /* 印刷時のborder分を考慮 */
-          border-right: 0.2mm dashed #ddd !important;
-      }
-      #weeklyTable th.day-header .col-mood,
-      #weeklyTable td.day-cell .col-mood {
-          width: calc(15.4% + 0.2mm) !important; /* 印刷時のborder分を考慮 */
-          border-right: 0.2mm dashed #ddd !important;
-      }
-      #weeklyTable th.day-header .col-fatigue,
-      #weeklyTable td.day-cell .col-fatigue {
-          width: 15.4% !important;
-      }
-
-
-      /* 行高の調整 */
-      #weeklyTable thead tr {
-        height: 3% !important;
-      }
-      #weeklyTable tbody tr {
-        height: calc(97% / 25) !important;
-      }
-
-      #weeklyTable th, #weeklyTable td {
+      /* 印刷時のすべてのth/tdに基本の罫線を適用 */
+      #weeklyTable th,
+      #weeklyTable td {
         border: 0.2mm solid #eee !important; /* 印刷時の罫線もミリメートル単位に */
         padding: 0 !important;
         vertical-align: top !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
       }
+
+      /* 列幅の調整 */
+      #weeklyTable thead tr th:first-child,
+      #weeklyTable tbody tr td:first-child {
+        width: 4% !important;
+        min-width: 0 !important;
+        padding: 0.5mm 1mm !important;
+        background-color: #f8f8f8 !important;
+      }
+      /* 各曜日のセル（全体） */
+      #weeklyTable #dateRow th,
+      #weeklyTable #subHeaderRow th,
+      #weeklyTable tbody tr td.day-cell,
+      #weeklyTable td.daily-summary-cell {
+        width: calc(96% / 7) !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+      }
+
+      /* 印刷時のサブ列の幅 */
+      #weeklyTable .col-activity { width: 69.2% !important; }
+      #weeklyTable .col-mood { width: 15.4% !important; }
+      #weeklyTable .col-fatigue { width: 15.4% !important; }
+
+      /* 印刷時のサブ列の間の破線（擬似要素） */
+      #weeklyTable #subHeaderRow .col-activity::after,
+      #weeklyTable #subHeaderRow .col-mood::after,
+      #weeklyTable td.day-cell .col-activity::after,
+      #weeklyTable td.day-cell .col-mood::after {
+          border-right: 0.2mm dashed #ddd !important;
+      }
+
+      /* 行高の調整 */
+      #weeklyTable thead tr { height: 3% !important; }
+      #weeklyTable tbody tr { height: calc(97% / 25) !important; }
+
       /* 印刷時のセル内要素のスタイル調整 */
-      #weeklyTable th.day-header .col-header,
+      #weeklyTable #subHeaderRow .col-header,
       #weeklyTable td.day-cell > div {
           padding: 0.5mm 1mm !important;
           line-height: 1 !important;
@@ -291,8 +298,9 @@
           min-height: 0 !important;
           white-space: pre-wrap !important;
       }
-      #weeklyTable tbody tr:last-child td {
-        background-color: #f8f8f8 !important; /* 印刷時も備考欄の背景色 */
+      #weeklyTable tbody tr:last-child td,
+      #weeklyTable tbody tr:last-child th {
+          background-color: #f8f8f8 !important;
       }
     }
   </style>
@@ -372,18 +380,20 @@
         date.setUTCDate(currentMonday.getUTCDate() + i);
         datesInWeek.push(date);
 
+        // 日付ヘッダー
         const thDate = document.createElement('th');
-        thDate.classList.add('day-header');
-        thDate.setAttribute('colspan', '3');
+        thDate.classList.add('day-header'); // クラスを追加
+        thDate.setAttribute('colspan', '3'); // 3つのサブ列にまたがる
         thDate.textContent = formatDate(date);
         dateRow.appendChild(thDate);
 
+        // 各曜日のサブヘッダー
         const thSub = document.createElement('th');
-        thSub.classList.add('day-header');
+        thSub.classList.add('day-header'); // クラスを追加
         thSub.innerHTML = `
-          <div class="col-activity">やったこと</div>
-          <div class="col-mood">気分</div>
-          <div class="col-fatigue">疲労度</div>
+          <div class="col-activity col-header">やったこと</div>
+          <div class="col-mood col-header">気分</div>
+          <div class="col-fatigue col-header">疲労度</div>
         `;
         subHeaderRow.appendChild(thSub);
       }
@@ -532,6 +542,17 @@
                 font-size: 0.5em !important;
             }
 
+            /* 印刷時のすべてのth/tdに基本の罫線を適用 */
+            #weeklyTable th,
+            #weeklyTable td {
+                border: 0.2mm solid #eee !important;
+                padding: 0 !important;
+                vertical-align: top !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            /* 列幅の調整 */
             #weeklyTable thead tr th:first-child,
             #weeklyTable tbody tr td:first-child {
                 width: 4% !important;
@@ -539,38 +560,35 @@
                 padding: 0.5mm 1mm !important;
                 background-color: #f8f8f8 !important;
             }
-            #weeklyTable thead tr th.day-header,
-            #weeklyTable tbody tr td.day-cell {
+            /* 各曜日のセル（全体） */
+            #weeklyTable #dateRow th,
+            #weeklyTable #subHeaderRow th,
+            #weeklyTable tbody tr td.day-cell,
+            #weeklyTable td.daily-summary-cell {
                 width: calc(96% / 7) !important;
                 min-width: 0 !important;
                 padding: 0 !important;
             }
-            #weeklyTable th.day-header .col-activity,
-            #weeklyTable td.day-cell .col-activity {
-                width: calc(69.2% + 0.2mm) !important;
+
+            /* 印刷時のサブ列の幅 */
+            #weeklyTable .col-activity { width: 69.2% !important; }
+            #weeklyTable .col-mood { width: 15.4% !important; }
+            #weeklyTable .col-fatigue { width: 15.4% !important; }
+
+            /* 印刷時のサブ列の間の破線（擬似要素） */
+            #weeklyTable #subHeaderRow .col-activity::after,
+            #weeklyTable #subHeaderRow .col-mood::after,
+            #weeklyTable td.day-cell .col-activity::after,
+            #weeklyTable td.day-cell .col-mood::after {
                 border-right: 0.2mm dashed #ddd !important;
-            }
-            #weeklyTable th.day-header .col-mood,
-            #weeklyTable td.day-cell .col-mood {
-                width: calc(15.4% + 0.2mm) !important;
-                border-right: 0.2mm dashed #ddd !important;
-            }
-            #weeklyTable th.day-header .col-fatigue,
-            #weeklyTable td.day-cell .col-fatigue {
-                width: 15.4% !important;
             }
 
+            /* 行高の調整 */
             #weeklyTable thead tr { height: 3% !important; }
             #weeklyTable tbody tr { height: calc(97% / 25) !important; }
 
-            #weeklyTable th, #weeklyTable td {
-                border: 0.2mm solid #eee !important;
-                padding: 0 !important;
-                vertical-align: top !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-            }
-            #weeklyTable th.day-header .col-header,
+            /* 印刷時のセル内要素のスタイル調整 */
+            #weeklyTable #subHeaderRow .col-header,
             #weeklyTable td.day-cell > div {
                 padding: 0.5mm 1mm !important;
                 line-height: 1 !important;
@@ -587,7 +605,8 @@
                 min-height: 0 !important;
                 white-space: pre-wrap !important;
             }
-            #weeklyTable tbody tr:last-child td {
+            #weeklyTable tbody tr:last-child td,
+            #weeklyTable tbody tr:last-child th {
                 background-color: #f8f8f8 !important;
             }
         `;
