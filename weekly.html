@@ -74,7 +74,7 @@
       min-width: 1200px; /* 3列になったのでさらに広げる */
     }
     #weeklyTable th, #weeklyTable td {
-      border: 1px solid #eee; /* セルの境界線 */
+      border: 1px solid #ccc; /* ★修正：罫線をはっきりと */
       padding: 4px 8px; /* 上下パディング */
       text-align: left;
       vertical-align: top; /* 上揃え */
@@ -92,7 +92,6 @@
       line-height: 1.2; /* 行間を調整 */
       white-space: normal; /* 通常の改行を許可 */
       word-break: break-word; /* 長い単語でも強制改行 */
-      word-break: break-all; /* さらに長い単語も強制改行 */ /* 追加 */
     }
     #weeklyTable td.time-cell {
       text-align: center; /* 時間表示は中央揃え */
@@ -229,7 +228,7 @@
     .printable-area .daily-summary {
       margin-top: 1mm !important;
       padding-top: 1mm !important;
-      border-top: 1px solid black !important; /* 実線に */
+      border-top: 1px solid black !important;
       font-size: 0.7em !important;
     }
     .printable-area .daily-summary p {
@@ -458,10 +457,11 @@
 
           const tdActivity = document.createElement('td');
           tdActivity.classList.add('activity-col');
+          // ★修正：activityが配列であることを考慮し、joinで文字列化
           if (entry?.activity && entry.activity.length > 0) {
               const activityP = document.createElement('p');
               activityP.classList.add('activity-content');
-              activityP.textContent = entry.activity.join(', ');
+              activityP.textContent = entry.activity.join(', '); // ここを修正
               tdActivity.appendChild(activityP);
           } else {
               tdActivity.textContent = '―';
@@ -476,11 +476,14 @@
 
           const tdMood = document.createElement('td');
           tdMood.classList.add('mood-col');
-          if (entry?.mood !== '' && entry?.mood !== null) {
+          // ★修正：moodが空文字列の場合も「―」を表示、または「睡眠中」を考慮
+          if (entry?.mood !== '' && entry?.mood !== null && entry?.mood !== undefined) {
               const moodP = document.createElement('p');
               moodP.classList.add('mood-value');
               moodP.textContent = entry.mood;
               tdMood.appendChild(moodP);
+          } else if (entry?.activity && entry.activity.includes("睡眠")) { // 睡眠中の場合
+              tdMood.textContent = '睡眠中';
           } else {
               tdMood.textContent = '―';
           }
@@ -488,12 +491,16 @@
 
           const tdFatigue = document.createElement('td');
           tdFatigue.classList.add('fatigue-col');
-          if (entry?.fatigue !== '' && entry?.fatigue !== null) {
+          // ★修正：fatigueが空文字列の場合も「―」を表示
+          if (entry?.fatigue !== '' && entry?.fatigue !== null && entry?.fatigue !== undefined) {
               const fatigueP = document.createElement('p');
               fatigueP.classList.add('fatigue-value');
               fatigueP.textContent = entry.fatigue;
               tdFatigue.appendChild(fatigueP);
-          } else {
+          } else if (entry?.activity && entry.activity.includes("睡眠")) { // 睡眠中の場合、疲労度は表示なし
+              tdFatigue.textContent = ''; // または「―」でも可
+          }
+          else {
               tdFatigue.textContent = '―';
           }
           tr.appendChild(tdFatigue);
@@ -590,7 +597,28 @@
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        ctx.drawImage(canvas, 0, 0, a4LandscapeWidthPx, a4LandscapeHeightPx);
+        // キャプチャしたキャンバスの画像を、計算したA4サイズにフィットするように描画
+        // アスペクト比を維持しつつ、A4の縦横比に合わせる
+        const canvasAspectRatio = canvas.width / canvas.height;
+        const outputAspectRatio = outputCanvas.width / outputCanvas.height;
+
+        let drawWidth = outputCanvas.width;
+        let drawHeight = outputCanvas.height;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (canvasAspectRatio > outputAspectRatio) {
+            // キャプチャ画像の方が横長の場合、幅に合わせて高さを調整し、中央に配置
+            drawHeight = outputCanvas.width / canvasAspectRatio;
+            offsetY = (outputCanvas.height - drawHeight) / 2;
+        } else {
+            // キャプチャ画像の方が縦長の場合、高さに合わせて幅を調整し、中央に配置
+            drawWidth = outputCanvas.height * canvasAspectRatio;
+            offsetX = (outputCanvas.width - drawWidth) / 2;
+        }
+
+        ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
+
 
         const imgData = outputCanvas.toDataURL('image/png');
         const link = document.createElement('a');
