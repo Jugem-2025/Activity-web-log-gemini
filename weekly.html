@@ -156,7 +156,7 @@
       width: 100% !important;
       height: 100% !important;
       border-collapse: collapse !important;
-      table-layout: fixed !important;
+      table-layout: fixed !important; /* ★修正: テーブルレイアウトを固定 */
       font-size: 0.3em !important; /* 全体フォントサイズをさらに小さく調整 */
     }
 
@@ -169,27 +169,32 @@
 
     /* 各日付ブロック (7日分) は 96% を占める */
     /* 各日付ブロックの幅: 96% / 7 */
-    /* やったこと: 70% of 日付ブロック幅 */
-    /* 気分: 15% of 日付ブロック幅 */
-    /* 疲労度: 15% of 日付ブロック幅 */
+    /* やったこと: 約 70% of 日付ブロック幅 */
+    /* 気分: 約 15% of 日付ブロック幅 */
+    /* 疲労度: 約 15% of 日付ブロック幅 */
 
     /* 各日3列のヘッダー幅を調整 */
     .printable-area #weeklyTable thead tr th:nth-child(3n+2) { /* やったこと */
-        width: calc((96% / 7) * 0.7) !important;
+        width: calc((96% / 7) * 0.70) !important; /* 70% */
     }
     .printable-area #weeklyTable thead tr th:nth-child(3n+3), /* 気分 */
     .printable-area #weeklyTable thead tr th:nth-child(3n+4) { /* 疲労度 */
-        width: calc((96% / 7) * 0.15) !important;
+        width: calc((96% / 7) * 0.15) !important; /* 15% */
     }
 
     /* 各日のデータセル幅を調整 */
     .printable-area #weeklyTable tbody tr td.activity-col { /* やったこと */
-        width: calc((96% / 7) * 0.7) !important;
+        width: calc((96% / 7) * 0.70) !important;
+        overflow: hidden !important; /* ★追加: 内容がはみ出したら隠す */
+        text-overflow: ellipsis !important; /* ★追加: ... で表示 */
     }
     .printable-area #weeklyTable tbody tr td.mood-col, /* 気分 */
     .printable-area #weeklyTable tbody tr td.fatigue-col { /* 疲労度 */
         width: calc((96% / 7) * 0.15) !important;
         text-align: center !important; /* 数値は中央揃え */
+        overflow: hidden !important; /* ★追加 */
+        text-overflow: ellipsis !important; /* ★追加 */
+        white-space: nowrap !important; /* ★追加: 改行させない */
     }
 
     /* 行高の調整 */
@@ -211,8 +216,8 @@
       border: 1px solid black !important; /* 画像出力時の罫線を維持 */
       padding: 0.5mm 0.8mm !important; /* 印刷時のパディングを調整 */
       vertical-align: top !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
+      /* overflow: hidden !important; ★ここから下の2行は各セルで指定するように修正 */
+      /* text-overflow: ellipsis !important; */
       word-wrap: break-word; /* 長い単語の折り返し */
     }
     .printable-area #weeklyTable td.time-cell {
@@ -268,7 +273,7 @@
             width: 100% !important;
             height: 100% !important;
             border-collapse: collapse !important;
-            table-layout: fixed !important;
+            table-layout: fixed !important; /* ★修正: テーブルレイアウトを固定 */
             font-size: 0.3em !important;
         }
         /* 列幅の調整 */
@@ -278,19 +283,24 @@
             min-width: 0 !important;
         }
         #weeklyTable thead tr th:nth-child(3n+2) {
-            width: calc((96% / 7) * 0.7) !important;
+            width: calc((96% / 7) * 0.70) !important;
         }
         #weeklyTable thead tr th:nth-child(3n+3),
         #weeklyTable thead tr th:nth-child(3n+4) {
             width: calc((96% / 7) * 0.15) !important;
         }
         #weeklyTable tbody tr td.activity-col {
-            width: calc((96% / 7) * 0.7) !important;
+            width: calc((96% / 7) * 0.70) !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
         #weeklyTable tbody tr td.mood-col,
         #weeklyTable tbody tr td.fatigue-col {
             width: calc((96% / 7) * 0.15) !important;
             text-align: center !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
         }
         /* 行高の調整 */
         #weeklyTable thead #dateRow {
@@ -309,8 +319,8 @@
           border: 1px solid black !important;
           padding: 0.5mm 0.8mm !important;
           vertical-align: top !important;
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
+          /* overflow: hidden !important; */ /* 各セルで個別に指定 */
+          /* text-overflow: ellipsis !important; */ /* 各セルで個別に指定 */
           word-wrap: break-word;
         }
         #weeklyTable td.time-cell {
