@@ -124,8 +124,7 @@
         padding: 0;
     }
 
-    /* 印刷用スタイル (横長A4サイズ調整) と画像保存用スタイルを共通化 */
-    /* .printable-area クラスがbodyに付与されたときに適用されるスタイル */
+    /* 印刷用スタイル (.printable-area クラスがbodyに付与されたときに適用) */
     .printable-area {
       margin: 0 !important;
       /* A4横長を想定した余白: 上下1%, 左右2-3% */
@@ -133,10 +132,11 @@
       max-width: none !important;
       width: 297mm !important; /* A4横幅 */
       height: 210mm !important; /* A4縦幅 */
-      overflow: hidden !important; /* ★修正: 内容がはみ出したら隠す */
+      overflow: hidden !important; /* 内容がはみ出したら隠す */
       display: block !important;
       box-sizing: border-box !important;
       background-color: white !important;
+      font-size: 0.3em !important; /* 全体フォントサイズをさらに小さく調整 */
     }
     .printable-area header,
     .printable-area .week-navigation,
@@ -158,7 +158,6 @@
       height: 100% !important;
       border-collapse: collapse !important;
       table-layout: fixed !important; /* ★重要: テーブルレイアウトを固定 */
-      font-size: 0.3em !important; /* 全体フォントサイズをさらに小さく調整 */
     }
 
     /* 列幅の調整 */
@@ -169,7 +168,7 @@
     }
 
     /* 各日付ブロック (7日分) は残りの 96% を占める */
-    /* 各日付ブロックの幅: 96% / 7 */
+    /* 各日付ブロックの幅: (96% / 7) */
     /* やったこと: 70% of 日付ブロック幅 */
     /* 気分: 15% of 日付ブロック幅 */
     /* 疲労度: 15% of 日付ブロック幅 */
@@ -186,34 +185,34 @@
     /* 各日のデータセル幅を調整 */
     .printable-area #weeklyTable tbody tr td.activity-col { /* やったこと */
         width: calc((96% / 7) * 0.70) !important;
-        overflow: hidden !important; /* ★追加: 内容がはみ出したら隠す */
-        text-overflow: ellipsis !important; /* ★追加: ... で表示 */
+        overflow: hidden !important; /* 内容がはみ出したら隠す */
+        text-overflow: ellipsis !important; /* ... で表示 */
         white-space: normal !important; /* ★修正: 必要に応じて改行を許可 */
     }
     .printable-area #weeklyTable tbody tr td.mood-col, /* 気分 */
     .printable-area #weeklyTable tbody tr td.fatigue-col { /* 疲労度 */
         width: calc((96% / 7) * 0.15) !important;
         text-align: center !important; /* 数値は中央揃え */
-        overflow: hidden !important; /* ★追加 */
-        text-overflow: ellipsis !important; /* ★追加 */
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
         white-space: nowrap !important; /* ★修正: 改行させない */
     }
 
     /* 行高の調整 */
     .printable-area #weeklyTable thead #dateRow {
-      height: 2% !important; /* 日付と曜日の行 (少し増やす) */
+      height: 2% !important; /* 日付と曜日の行 */
     }
     .printable-area #weeklyTable thead #subHeaderRow {
-      height: 2% !important; /* やったこと、気分、疲労度の行 (少し増やす) */
+      height: 2% !important; /* やったこと、気分、疲労度の行 */
     }
-    /* 残りの96%を24行で割る */
+    /* 残りの96%を24時間帯+備考行で分配 */
     .printable-area #weeklyTable tbody tr {
-      height: calc(90% / 24) !important; /* 各時間帯の行 (24行) */
+      height: calc(96% / 25) !important; /* 各時間帯の行 (24行) */
     }
-    /* 備考行は高さ自動調整だが、全体の高さに含めるため、上記24行で90%にする */
+    /* 備考行は残りスペースを吸収 */
     .printable-area #weeklyTable tbody tr:last-child {
         height: auto !important; /* 内容に合わせて高さを調整 */
-        min-height: calc(10% / 2) !important; /* 最低限の高さを確保 */
+        min-height: calc(96% / 25) !important; /* 最低限の高さを確保 */
     }
 
 
@@ -258,6 +257,7 @@
             display: block !important;
             box-sizing: border-box !important;
             background-color: white !important;
+            font-size: 0.3em !important;
         }
         header, .week-navigation, .top-icons {
             display: none !important;
@@ -276,8 +276,7 @@
             width: 100% !important;
             height: 100% !important;
             border-collapse: collapse !important;
-            table-layout: fixed !important; /* ★重要 */
-            font-size: 0.3em !important;
+            table-layout: fixed !important;
         }
         /* 列幅の調整 */
         #weeklyTable thead tr th:first-child,
@@ -314,11 +313,11 @@
           height: 2% !important;
         }
         #weeklyTable tbody tr {
-          height: calc(90% / 24) !important;
+          height: calc(96% / 25) !important;
         }
         #weeklyTable tbody tr:last-child {
             height: auto !important;
-            min-height: calc(10% / 2) !important;
+            min-height: calc(96% / 25) !important;
         }
         #weeklyTable th, #weeklyTable td {
           border: 1px solid black !important;
@@ -581,16 +580,16 @@
         const startDate = formatDateForFilename(currentMonday);
         const endDate = formatDateForFilename(new Date(currentMonday.getFullYear(), currentMonday.getMonth(), currentMonday.getDate() + 6));
 
+        // html2canvasで要素をキャプチャ
         const canvas = await html2canvas(element, {
             scale: 3, // 高解像度でキャプチャ (300dpi相当)
             useCORS: true,
-            windowWidth: element.offsetWidth, // bodyの現在の幅を使用
-            windowHeight: element.offsetHeight, // bodyの現在の高さを使用
+            windowWidth: element.offsetWidth, /* 変更: element.scrollWidth から offsetWidth に */
+            windowHeight: element.offsetHeight, /* 変更: element.scrollHeight から offsetHeight に */
             x: 0,
             y: 0,
             width: element.offsetWidth,
             height: element.offsetHeight,
-            // 罫線が薄くなる問題は、CSSでの固定と高スケールでのレンダリングで対応
         });
 
         // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
@@ -630,7 +629,6 @@
         }
 
         ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
-
 
         const imgData = outputCanvas.toDataURL('image/png');
         const link = document.createElement('a');
