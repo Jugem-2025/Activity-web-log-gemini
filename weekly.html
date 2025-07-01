@@ -126,7 +126,8 @@
     /* 印刷用スタイル (.printable-area クラスがbodyに付与されたときに適用) */
     .printable-area {
       margin: 0 !important;
-      padding: 0 !important; /* A4サイズに収めるためにパディングを0に */
+      /* 上下1%, 左右2-3% の余白をA4サイズ基準で計算 */
+      padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
       max-width: none !important;
       width: 297mm !important; /* A4横幅 */
       height: 210mm !important; /* A4縦幅 */
@@ -144,9 +145,9 @@
     .printable-area #weeklyTableContainer {
       border: none !important;
       box-shadow: none !important;
-      padding: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
+      padding: 0 !important; /* コンテナ自体のパディングは0に */
+      width: 100% !important; /* bodyの幅いっぱいに */
+      height: 100% !important; /* bodyの高さいっぱいに */
       display: block !important;
       overflow: visible !important;
       box-sizing: border-box !important;
@@ -161,72 +162,71 @@
     /* 列幅の調整 */
     .printable-area #weeklyTable thead tr th:first-child,
     .printable-area #weeklyTable tbody tr td.time-cell {
-      width: 4% !important; /* '時間' 列 */
+      width: 4% !important; /* '時間' 列 4% */
       min-width: 0 !important;
     }
 
     /* 各日付ブロック (7日分) は残りの 96% を占める */
     /* 各日付ブロックの幅は (96% / 7) */
-    /* この幅の中で、やったこと:70%, 気分:15%, 疲労度:15% */
-
-    /* 日付ヘッダー (colspan=3) は、その下の3列の合計幅と同じになるように */
-    .printable-area #weeklyTable thead tr #dateRow th:nth-child(n+2) { /* 2番目以降の日付th */
+    /* 日付ヘッダー (colspan=3) の幅を、下の3列の合計幅と同じにする */
+    .printable-area #weeklyTable thead tr #dateRow th:nth-child(n+2) { /* 2番目以降の日付th（時間列の次から） */
         width: calc(96% / 7) !important;
     }
 
-    /* サブヘッダーとデータセルの幅調整 */
-    /* やったこと: 各日付ブロックの70% */
-    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+1), /* 1番目のやったこと、4番目のやったこと... */
+    /* サブヘッダーとデータセルの幅調整: やったこと:9, 気分:2, 疲労度:2 の比率 */
+    /* 合計 9+2+2 = 13 */
+    /* やったこと: 各日付ブロック幅の 9/13 */
+    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+1), /* 1番目の「やったこと」、4番目の「やったこと」... */
     .printable-area #weeklyTable tbody tr td.activity-col {
-        width: calc((96% / 7) * 0.70) !important;
+        width: calc((96% / 7) * (9 / 13)) !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        white-space: normal !important;
+        white-space: normal !important; /* 必要に応じて改行を許可 */
     }
-    /* 気分: 各日付ブロックの15% */
-    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+2), /* 2番目の気分、5番目の気分... */
+    /* 気分: 各日付ブロック幅の 2/13 */
+    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+2), /* 2番目の「気分」、5番目の「気分」... */
     .printable-area #weeklyTable tbody tr td.mood-col {
-        width: calc((96% / 7) * 0.15) !important;
+        width: calc((96% / 7) * (2 / 13)) !important;
         text-align: center !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        white-space: nowrap !important;
+        white-space: nowrap !important; /* 改行させない */
     }
-    /* 疲労度: 各日付ブロックの15% */
-    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+3), /* 3番目の疲労度、6番目の疲労度... */
+    /* 疲労度: 各日付ブロック幅の 2/13 */
+    .printable-area #weeklyTable thead tr #subHeaderRow th:nth-child(3n+3), /* 3番目の「疲労度」、6番目の「疲労度」... */
     .printable-area #weeklyTable tbody tr td.fatigue-col {
-        width: calc((96% / 7) * 0.15) !important;
+        width: calc((96% / 7) * (2 / 13)) !important;
         text-align: center !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        white-space: nowrap !important;
+        white-space: nowrap !important; /* 改行させない */
     }
 
     /* 行高の調整 */
     .printable-area #weeklyTable thead #dateRow {
-      height: 3% !important; /* 日付と曜日の行 (少し高く) */
+      height: 3% !important; /* 日付と曜日の行 */
     }
     .printable-area #weeklyTable thead #subHeaderRow {
-      height: 3% !important; /* やったこと、気分、疲労度の行 (少し高く) */
+      height: 3% !important; /* やったこと、気分、疲労度の行 */
     }
-    /* 残りの94%を24時間帯+備考行で分配 */
+    /* 残りの94%を24時間帯(24行) + 備考行(1行) = 25行で分配 */
     .printable-area #weeklyTable tbody tr {
-      height: calc(94% / 25) !important; /* 各時間帯の行 (24行) + 備考行で均等配分 */
+      height: calc(94% / 25) !important;
       min-height: 0;
     }
-    /* 備考行は内容に合わせて高さを調整しつつ、最低限の高さを確保 */
+    /* 備考行は内容に合わせて高さを調整しつつ、最低限の高さを確保し、縦方向中央揃え */
     .printable-area #weeklyTable tbody tr:last-child {
         height: auto !important;
-        min-height: calc(94% / 25) !important; /* 最低限の高さを確保 (他の行と同じ高さを最低値とする) */
-        vertical-align: middle !important; /* 備考は中央揃え */
+        min-height: calc(94% / 25) !important;
+        vertical-align: middle !important;
     }
-
 
     .printable-area #weeklyTable th, .printable-area #weeklyTable td {
       border: 1px solid black !important; /* 画像出力時の罫線を明確に */
       padding: 0.5mm 0.8mm !important; /* 印刷時のパディングを調整 */
       vertical-align: top !important;
-      word-wrap: break-word;
+      word-wrap: break-word; /* 長い単語の折り返し */
+      border-spacing: 0 !important; /* 罫線の隙間をなくす */
     }
     .printable-area #weeklyTable td.time-cell {
       padding: 1mm !important;
@@ -254,7 +254,7 @@
     @media print {
         body {
             margin: 0 !important;
-            padding: 0 !important;
+            padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
             max-width: none !important;
             width: 297mm !important;
             height: 210mm !important;
@@ -294,14 +294,14 @@
         }
         #weeklyTable thead tr #subHeaderRow th:nth-child(3n+1),
         #weeklyTable tbody tr td.activity-col {
-            width: calc((96% / 7) * 0.70) !important;
+            width: calc((96% / 7) * (9 / 13)) !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             white-space: normal !important;
         }
         #weeklyTable thead tr #subHeaderRow th:nth-child(3n+2),
         #weeklyTable tbody tr td.mood-col {
-            width: calc((96% / 7) * 0.15) !important;
+            width: calc((96% / 7) * (2 / 13)) !important;
             text-align: center !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
@@ -309,7 +309,7 @@
         }
         #weeklyTable thead tr #subHeaderRow th:nth-child(3n+3),
         #weeklyTable tbody tr td.fatigue-col {
-            width: calc((96% / 7) * 0.15) !important;
+            width: calc((96% / 7) * (2 / 13)) !important;
             text-align: center !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
@@ -336,6 +336,7 @@
           padding: 0.5mm 0.8mm !important;
           vertical-align: top !important;
           word-wrap: break-word;
+          border-spacing: 0 !important;
         }
         #weeklyTable td.time-cell {
           padding: 1mm !important;
@@ -452,8 +453,9 @@
 
       weeklyTableBody.innerHTML = '';
 
+      // 00:00 から 23:00 までの24時間分を生成
       for (let i = 0; i < 24; i++) {
-        const hour = (i + 4) % 24;
+        const hour = i; // 0から23までの時間
         const timeKey = hour.toString().padStart(2, '0');
 
         const tr = document.createElement('tr');
@@ -575,17 +577,16 @@
         const startDate = formatDateForFilename(currentMonday);
         const endDate = formatDateForFilename(new Date(currentMonday.getFullYear(), currentMonday.getMonth(), currentMonday.getDate() + 6));
 
-        // html2canvasに渡す前に、要素がDOMに完全にレンダリングされていることを確認するために少し待つ
-        // これにより、CSSの適用が確実になります。
-        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms待機
+        // CSSの適用が完了するまでわずかに待つ
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms待機を推奨
 
-        // html2canvas のキャプチャ範囲を body 全体として設定
-        // widthとheightは明示的に指定せず、bodyの現在の計算されたサイズに任せる
+        // html2canvasで要素をキャプチャ
+        // body全体をキャプチャし、その計算されたサイズを使用
         const canvas = await html2canvas(element, {
-            scale: 3, // 高解像度でキャプチャ
+            scale: 3, // 高解像度でキャプチャ (300dpi相当)
             useCORS: true,
-            // x, y は指定しない（デフォルトの0,0でbody全体をキャプチャ）
-            // windowWidth, windowHeight も指定しないことで、bodyの計算されたサイズを使用
+            // width, height を指定しないことで、要素の現在のレイアウトサイズを自動的に使用
+            // x, y も指定しない（デフォルトの0,0でbody全体をキャプチャ）
         });
 
         // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
@@ -604,25 +605,36 @@
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        // キャプチャしたキャンバスの画像を、計算したA4サイズにフィットするように描画
-        // アスペクト比を維持しつつ、A4の縦横比に合わせる
+        // キャプチャした画像をA4サイズのキャンバスに描画
+        // printable-areaのpaddingを考慮して描画領域を計算
+        // cssのpadding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
+        // 上下 1% -> 210mm * 0.01 = 2.1mm
+        // 左右 2% (左) と 3% (右) -> 297mm * 0.02 = 5.94mm, 297mm * 0.03 = 8.91mm
+        const paddingLeftPx = Math.floor((297 * 0.03 / mmPerInch) * dpi); // 3%
+        const paddingRightPx = Math.floor((297 * 0.02 / mmPerInch) * dpi); // 2%
+        const paddingTopPx = Math.floor((210 * 0.01 / mmPerInch) * dpi); // 1%
+        const paddingBottomPx = Math.floor((210 * 0.01 / mmPerInch) * dpi); // 1%
+
+        const drawableWidth = outputCanvas.width - paddingLeftPx - paddingRightPx;
+        const drawableHeight = outputCanvas.height - paddingTopPx - paddingBottomPx;
+
         const canvasAspectRatio = canvas.width / canvas.height;
-        const outputAspectRatio = outputCanvas.width / outputCanvas.height;
+        const drawableAspectRatio = drawableWidth / drawableHeight;
 
         let drawWidth, drawHeight;
-        let offsetX = 0;
-        let offsetY = 0;
+        let offsetX = paddingLeftPx;
+        let offsetY = paddingTopPx;
 
-        if (canvasAspectRatio > outputAspectRatio) {
-            // キャプチャ画像の方が横長の場合、幅に合わせて高さを調整し、中央に配置
-            drawWidth = outputCanvas.width;
-            drawHeight = outputCanvas.width / canvasAspectRatio;
-            offsetY = (outputCanvas.height - drawHeight) / 2;
+        if (canvasAspectRatio > drawableAspectRatio) {
+            // キャプチャ画像の方が横長の場合、描画可能幅に合わせて高さを調整
+            drawWidth = drawableWidth;
+            drawHeight = drawableWidth / canvasAspectRatio;
+            offsetY += (drawableHeight - drawHeight) / 2; // 垂直方向中央揃え
         } else {
-            // キャプチャ画像の方が縦長の場合、高さに合わせて幅を調整し、中央に配置
-            drawHeight = outputCanvas.height;
-            drawWidth = outputCanvas.height * canvasAspectRatio;
-            offsetX = (outputCanvas.width - drawWidth) / 2;
+            // キャプチャ画像の方が縦長の場合、描画可能高さに合わせて幅を調整
+            drawHeight = drawableHeight;
+            drawWidth = drawableHeight * canvasAspectRatio;
+            offsetX += (drawableWidth - drawWidth) / 2; // 水平方向中央揃え
         }
 
         ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
@@ -635,6 +647,7 @@
         link.click();
         document.body.removeChild(link);
 
+        // クラスを削除して元のスタイルに戻す
         element.classList.remove('printable-area');
     });
 
