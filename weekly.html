@@ -67,11 +67,12 @@
       border-radius: 6px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       padding: 10px;
+      /* 通常表示時のA4横幅を超えるサイズを許容するためmin-widthを設定 */
+      min-width: 1200px;
     }
     #weeklyTable {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1200px;
     }
     #weeklyTable th, #weeklyTable td {
       border: 1px solid #ccc;
@@ -123,34 +124,23 @@
         padding: 0;
     }
 
-    /* 印刷用スタイル (.printable-area クラスがbodyに付与されたときに適用) */
+    /* 印刷用スタイル (.printable-area クラスが #weeklyTableContainer に付与されたときに適用) */
+    /* bodyは変更しない (画像出力ではhtml2canvasが対象要素のみをキャプチャするため) */
     .printable-area {
-      margin: 0 !important;
-      /* 上下1%, 左右2-3% の余白をA4サイズ基準で計算 */
+      /* A4横長サイズ (297mm x 210mm) */
+      width: 297mm !important;
+      height: 210mm !important;
+      /* 上下1%, 左右2-3% の余白をA4サイズ基準で計算してパディングとして適用 */
+      /* 左右は左3%, 右2% */
       padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
-      max-width: none !important;
-      width: 297mm !important; /* A4横幅 */
-      height: 210mm !important; /* A4縦幅 */
-      overflow: hidden !important;
-      display: block !important;
-      box-sizing: border-box !important;
-      background-color: white !important;
-      font-size: 0.3em !important;
-    }
-    .printable-area header,
-    .printable-area .week-navigation,
-    .printable-area .top-icons {
-      display: none !important;
-    }
-    .printable-area #weeklyTableContainer {
-      border: none !important;
-      box-shadow: none !important;
-      padding: 0 !important; /* コンテナ自体のパディングは0に */
-      width: 100% !important; /* bodyの幅いっぱいに */
-      height: 100% !important; /* bodyの高さいっぱいに */
-      display: block !important;
-      overflow: visible !important;
-      box-sizing: border-box !important;
+      margin: 0 !important; /* 中央寄せ解除 */
+      border: none !important; /* 通常時のボーダーを削除 */
+      box-shadow: none !important; /* 通常時の影を削除 */
+      background: white !important; /* 背景を白に */
+      overflow: visible !important; /* スクロールバーを非表示にし、内容全体を表示 */
+      min-width: unset !important; /* 通常時のmin-widthを解除 */
+      font-size: 0.3em !important; /* フォントサイズを縮小 */
+      box-sizing: border-box !important; /* paddingをwidth/heightに含める */
     }
     .printable-area #weeklyTable {
       width: 100% !important;
@@ -253,16 +243,15 @@
     /* @media print はそのまま残して、プリンターからの印刷に影響を与えないようにする */
     @media print {
         body {
-            margin: 0 !important;
-            padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
-            max-width: none !important;
-            width: 297mm !important;
-            height: 210mm !important;
-            overflow: hidden !important;
-            display: block !important;
-            box-sizing: border-box !important;
-            background-color: white !important;
-            font-size: 0.3em !important;
+            /* 印刷時には通常ページのスタイルを維持するか、別途調整が必要 */
+            margin: 0;
+            padding: 0;
+            max-width: none;
+            width: 100%;
+            height: 100vh; /* 画面の高さに合わせる */
+            overflow: auto;
+            background-color: white;
+            font-size: 1em; /* 通常のフォントサイズに戻す */
         }
         header, .week-navigation, .top-icons {
             display: none !important;
@@ -270,12 +259,14 @@
         #weeklyTableContainer {
             border: none !important;
             box-shadow: none !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            display: block !important;
+            /* 印刷時のコンテナのサイズは、bodyのサイズに合わせて自動調整される */
+            width: 297mm !important; /* A4横幅 */
+            height: 210mm !important; /* A4縦幅 */
+            padding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
+            margin: 0 auto !important; /* 印刷ページで中央に寄せる場合 */
             overflow: visible !important;
             box-sizing: border-box !important;
+            font-size: 0.3em !important; /* 印刷時のフォントサイズ */
         }
         #weeklyTable {
             width: 100% !important;
@@ -398,6 +389,7 @@
     const prevWeekBtn = document.getElementById('prevWeekBtn');
     const nextWeekBtn = document.getElementById('nextWeekBtn');
     const saveImageBtn = document.getElementById('saveImageBtn');
+    const weeklyTableContainer = document.getElementById('weeklyTableContainer'); // 追加
 
     let currentMonday = getMonday(new Date());
 
@@ -570,9 +562,11 @@
     saveImageBtn.addEventListener('click', async (e) => {
         e.preventDefault();
 
-        const element = document.body;
+        // キャプチャ対象を #weeklyTableContainer に変更
+        const elementToCapture = weeklyTableContainer;
 
-        element.classList.add('printable-area');
+        // printable-area クラスをキャプチャ対象要素に適用
+        elementToCapture.classList.add('printable-area');
 
         const startDate = formatDateForFilename(currentMonday);
         const endDate = formatDateForFilename(new Date(currentMonday.getFullYear(), currentMonday.getMonth(), currentMonday.getDate() + 6));
@@ -581,12 +575,10 @@
         await new Promise(resolve => setTimeout(resolve, 100)); // 100ms待機を推奨
 
         // html2canvasで要素をキャプチャ
-        // body全体をキャプチャし、その計算されたサイズを使用
-        const canvas = await html2canvas(element, {
+        // elementToCaptureの現在のレンダリングサイズが自動的に使用される
+        const canvas = await html2canvas(elementToCapture, {
             scale: 3, // 高解像度でキャプチャ (300dpi相当)
             useCORS: true,
-            // width, height を指定しないことで、要素の現在のレイアウトサイズを自動的に使用
-            // x, y も指定しない（デフォルトの0,0でbody全体をキャプチャ）
         });
 
         // A4サイズ（横長）のピクセル値を計算 (300dpi想定)
@@ -607,13 +599,14 @@
 
         // キャプチャした画像をA4サイズのキャンバスに描画
         // printable-areaのpaddingを考慮して描画領域を計算
-        // cssのpadding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
+        // CSSのpadding: calc(210mm * 0.01) calc(297mm * 0.02) calc(210mm * 0.01) calc(297mm * 0.03) !important;
         // 上下 1% -> 210mm * 0.01 = 2.1mm
-        // 左右 2% (左) と 3% (右) -> 297mm * 0.02 = 5.94mm, 297mm * 0.03 = 8.91mm
-        const paddingLeftPx = Math.floor((297 * 0.03 / mmPerInch) * dpi); // 3%
-        const paddingRightPx = Math.floor((297 * 0.02 / mmPerInch) * dpi); // 2%
-        const paddingTopPx = Math.floor((210 * 0.01 / mmPerInch) * dpi); // 1%
-        const paddingBottomPx = Math.floor((210 * 0.01 / mmPerInch) * dpi); // 1%
+        // 左 3%, 右 2% -> 297mm * 0.03 = 8.91mm (左), 297mm * 0.02 = 5.94mm (右)
+
+        const paddingLeftPx = (297 * 0.03 / mmPerInch) * dpi; // 3%
+        const paddingRightPx = (297 * 0.02 / mmPerInch) * dpi; // 2%
+        const paddingTopPx = (210 * 0.01 / mmPerInch) * dpi; // 1%
+        const paddingBottomPx = (210 * 0.01 / mmPerInch) * dpi; // 1%
 
         const drawableWidth = outputCanvas.width - paddingLeftPx - paddingRightPx;
         const drawableHeight = outputCanvas.height - paddingTopPx - paddingBottomPx;
@@ -648,7 +641,7 @@
         document.body.removeChild(link);
 
         // クラスを削除して元のスタイルに戻す
-        element.classList.remove('printable-area');
+        elementToCapture.classList.remove('printable-area');
     });
 
     function formatDateForFilename(date) {
