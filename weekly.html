@@ -232,7 +232,7 @@
       margin-top: 1mm !important;
       padding-top: 1mm !important;
       border-top: 1px solid black !important;
-      font-size: 0.7em !important; /* 親よりさらに小さく */
+      font-size: 0.7em !important;
     }
     .printable-area .daily-summary p {
       font-size: 0.8em !important; /* さらに少し小さく */
@@ -290,6 +290,7 @@
             text-overflow: ellipsis !important;
             white-space: normal !important;
         }
+        /* 追加: 気分と疲労度の列幅指定 */
         #weeklyTable thead tr #subHeaderRow th:nth-child(3n+2),
         #weeklyTable tbody tr td.mood-col {
             width: calc((96% / 7) * (15 / 100)) !important;
@@ -551,7 +552,7 @@
           summaryDiv.className = 'daily-summary';
           let summaryText = '';
           if (dailyNote.alcohol) summaryText += '<p>・アルコール摂取</p>';
-          if (dailyNote.caffeine) summaryText += '<p>・カフェイン摂取</p>';
+          if (dailyNote.caffeine) summaryText += `<p>・カフェイン摂取</p>`;
           if (dailyNote.intakeMemo) summaryText += `<p>・摂取状況: ${dailyNote.intakeMemo}</p>`;
           if (dailyNote.memo) summaryText += `<p>・日メモ: ${dailyNote.memo}</p>`;
           summaryDiv.innerHTML = summaryText;
