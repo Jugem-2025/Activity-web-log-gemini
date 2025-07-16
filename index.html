@@ -266,25 +266,19 @@
     function isEntryDefault(entry) {
         if (!entry) return true; // エントリ自体が存在しない場合はデフォルト
 
-        // activityが空か、"睡眠"のみで他の活動がなく、気分・疲労度が空である場合
-        const isActivitySleepDefault = entry.activity.length === 1 && entry.activity[0] === "睡眠" && entry.mood === '' && entry.fatigue === '';
-        const isActivityEmptyDefault = entry.activity.length === 0;
-
-        // moodとfatigueが初期値の50であるか、または"睡眠"の場合は空であるか
-        const isMoodFatigueDefault = (entry.mood === 50 && entry.fatigue === 50) || (entry.mood === '' && entry.fatigue === '' && entry.activity.includes("睡眠"));
-        
-        // freeが空であるか
+        // activityが空、moodとfatigueが初期値の50、freeが空の場合をデフォルトとみなす
+        const isActivityDefault = entry.activity.length === 0;
+        const isMoodFatigueDefault = (entry.mood === 50 || entry.mood === '' || entry.mood === undefined) && (entry.fatigue === 50 || entry.fatigue === '' || entry.fatigue === undefined);
         const isFreeDefault = entry.free === '';
 
-        // 「睡眠」のみで気分・疲労度が空の場合もデフォルトとはみなさない（折りたたみ対象にする）
-        // そのため、isActivitySleepDefault の場合は isEntryDefault は false になるべき
-        if (isActivitySleepDefault && isFreeDefault) {
-             return false; // 「睡眠」のみの場合はデフォルトではないと判定し、折りたたみ対象とする
+        // ただし、activityに「睡眠」が含まれている場合は、mood/fatigueが空になるのが正常なので、
+        // その場合はデフォルトとみなさず、折りたたみ対象とするべき
+        if (entry.activity.includes("睡眠")) {
+            return false; // 「睡眠」が選択されていれば、デフォルトではないと判断
         }
         
-        return (isActivityEmptyDefault && isMoodFatigueDefault && isFreeDefault);
+        return isActivityDefault && isMoodFatigueDefault && isFreeDefault;
     }
-
 
     /**
      * アプリのUIをレンダリング（描画）する関数
@@ -304,8 +298,23 @@
       dailyMemo.value = currentDailyNote.memo || '';
 
       // lastMoodとlastFatigueは、その日のデータに基づいて初期化
+      // その日の最初の有効な気分・疲労度を探して設定する
       lastMood = 50;
       lastFatigue = 50;
+      for (let i = 0; i < 24; i++) {
+        const hour = (i + 4) % 24;
+        const key = hour.toString().padStart(2,'0');
+        const entryToCheck = allDayData[key];
+        if (entryToCheck && !entryToCheck.activity.includes("睡眠")) {
+            if (entryToCheck.mood !== '' && entryToCheck.mood !== undefined && entryToCheck.mood !== null) {
+                lastMood = entryToCheck.mood;
+            }
+            if (entryToCheck.fatigue !== '' && entryToCheck.fatigue !== undefined && entryToCheck.fatigue !== null) {
+                lastFatigue = entryToCheck.fatigue;
+            }
+        }
+      }
+
 
       for (let i = 0; i < 24; i++) {
         const hour = (i + 4) % 24; // 04:00からスタート
@@ -320,10 +329,12 @@
         } else {
             // 「睡眠」以外の場合、mood/fatigueが未設定（初期値の50以外）であれば直前の値を適用
             // ただし、明示的に設定されている場合はその値を優先
-            if (entry.mood === 50 && i > 0) { // 初期値50のままで、かつ最初のブロックでなければ
+            // moodがundefined, null, '' の場合はlastMoodを適用
+            if (entry.mood === undefined || entry.mood === null || entry.mood === '') {
                 entry.mood = lastMood;
             }
-            if (entry.fatigue === 50 && i > 0) { // 初期値50のままで、かつ最初のブロックでなければ
+            // fatigueがundefined, null, '' の場合はlastFatigueを適用
+            if (entry.fatigue === undefined || entry.fatigue === null || entry.fatigue === '') {
                 entry.fatigue = lastFatigue;
             }
         }
@@ -332,10 +343,10 @@
         // 「睡眠」ではない場合のみ更新する
         if (!entry.activity.includes("睡眠")) {
             // moodが空でなければ（空は「睡眠中」または未設定を意味する）
-            if (entry.mood !== '') {
+            if (entry.mood !== '' && entry.mood !== undefined && entry.mood !== null) {
                 lastMood = entry.mood;
             }
-            if (entry.fatigue !== '') {
+            if (entry.fatigue !== '' && entry.fatigue !== undefined && entry.fatigue !== null) {
                 lastFatigue = entry.fatigue;
             }
         }
@@ -462,6 +473,7 @@
         } else {
             selMood.disabled = false;
             // moodがデータになければlastMoodを初期値とする
+            // ここでのentry.moodは上記ロジックでlastMoodが適用されている可能性がある
             if (entry.mood === undefined || entry.mood === null || entry.mood === '') {
                  selMood.value = lastMood;
                  entry.mood = lastMood; // データも更新
@@ -472,7 +484,7 @@
             let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
             currentEntry.mood = selMood.value === '' ? '' : parseInt(selMood.value);
             // lastMoodを更新 (次以降のブロックの初期値に影響)
-            if (currentEntry.mood !== '') {
+            if (currentEntry.mood !== '' && currentEntry.mood !== undefined && currentEntry.mood !== null) {
                 lastMood = currentEntry.mood;
             }
             allDayData[key] = currentEntry; // allDayDataを更新
@@ -507,7 +519,7 @@
             let currentEntry = allDayData[key] || JSON.parse(JSON.stringify(defaultEntry));
             currentEntry.fatigue = selFat.value === '' ? '' : parseInt(selFat.value);
             // lastFatigueを更新 (次以降のブロックの初期値に影響)
-            if (currentEntry.fatigue !== '') {
+            if (currentEntry.fatigue !== '' && currentEntry.fatigue !== undefined && currentEntry.fatigue !== null) {
                 lastFatigue = currentEntry.fatigue;
             }
             allDayData[key] = currentEntry; // allDayDataを更新
@@ -537,7 +549,10 @@
                 currentEntry.folded = !currentEntry.folded;
                 allDayData[key] = currentEntry; // allDayDataを更新
                 saveToLocalStorage(dateStr, key, currentEntry); // 折りたたみ状態を保存
-                render(); // UIを再描画して折りたたみ状態を反映
+                
+                // 再レンダリングではなく、直接表示を切り替えることでパフォーマンス改善
+                content.classList.toggle('hidden', currentEntry.folded);
+                compact.style.display = currentEntry.folded ? 'block' : 'none';
             }
         };
         
@@ -546,7 +561,8 @@
             e.stopPropagation(); // ヘッダー全体のクリックイベントが発火しないようにする
             
             const dateStr = dp.value;
-            const currentDayData = JSON.parse(localStorage.getItem(dateStr) || '{}');
+            // 現在のallDayDataから変更を反映
+            const currentDayData = allDayData; 
 
             // 全ての時間帯をループし、入力があるものだけ折りたたむ
             for (let j = 0; j < 24; j++) {
@@ -556,15 +572,16 @@
                 let entryToUpdate = currentDayData[timeKey] || JSON.parse(JSON.stringify(defaultEntry));
 
                 // entryToUpdateが初期値と異なる場合は折りたたむ
-                // 「睡眠」のみの場合も折りたたみ対象となるように isEntryDefault を修正済み
                 if (!isEntryDefault(entryToUpdate)) {
                     entryToUpdate.folded = true;
                     currentDayData[timeKey] = entryToUpdate;
+                } else {
+                    entryToUpdate.folded = false; // デフォルトの場合は展開状態を維持
+                    currentDayData[timeKey] = entryToUpdate;
                 }
             }
-            // allDayDataも更新
-            allDayData = currentDayData;
-            saveToLocalStorage(dateStr, null, null, allDayData.dailyNote); // 更新されたallDayDataをまとめて保存
+            // 更新されたallDayDataをまとめて保存 (dailyNoteも含まれるように)
+            saveToLocalStorage(dateStr, null, null, currentDayData.dailyNote); 
             render(); // UIを再描画して折りたたみ状態と最新データを反映
         };
 
